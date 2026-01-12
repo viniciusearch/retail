@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Equipamentos Devolvidos</title>
+  <style>
+    :root {
+      --dark: #1a1a2e;
+      --darker: #0f3460;
+      --accent: #e94560;
+      --light: #ffffff;
+      --gray: #2a2a3c;
+      --warning: #ff9800;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+      background-color: #f5f5f5;
+      display: flex;
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      width: 220px;
+      background: var(--dark);
+      color: var(--light);
+      padding: 20px 0;
+      position: fixed;
+      height: 100%;
+      overflow-y: auto;
+    }
+
+    .sidebar h2, .sidebar h3 {
+      padding: 0 20px 10px;
+      font-size: 1.2rem;
+      color: var(--accent);
+    }
+
+    .sidebar ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    .sidebar li {
+      padding: 8px 20px;
+    }
+
+    .sidebar a {
+      color: var(--light);
+      text-decoration: none;
+      display: block;
+      font-weight: 500;
+    }
+
+    .sidebar a:hover, .sidebar a.active {
+      color: var(--accent);
+    }
+
+    .main-content {
+      flex: 1;
+      margin-left: 220px;
+      padding: 20px;
+    }
+
+    header {
+      background: var(--darker);
+      padding: 15px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: white;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+    }
+
+    .filters {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 15px;
+    }
+
+    .filters input {
+      padding: 6px 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 0.9rem;
+      width: 250px;
+    }
+
+    .btn {
+      padding: 6px 12px;
+      border: none;
+      border-radius: 4px;
+      background: var(--accent);
+      color: white;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    th, td {
+      padding: 12px 10px;
+      text-align: left;
+      border-bottom: 1px solid #eee;
+    }
+
+    th {
+      background: var(--darker);
+      color: white;
+      position: sticky;
+      top: 0;
+    }
+
+    tr:hover {
+      background-color: #fff9f9;
+    }
+
+    .status-devolvido {
+      color: var(--warning);
+      font-weight: bold;
+    }
+
+    .actions a {
+      margin-right: 8px;
+      text-decoration: none;
+      color: var(--accent);
+      font-weight: bold;
+    }
+
+    #loading {
+      text-align: center;
+      padding: 2rem;
+      color: var(--darker);
+    }
+
+    .notebook-cell {
+      background-color: #fff5f5;
+    }
+
+    @media (max-width: 768px) {
+      .sidebar { width: 60px; padding: 10px 0; }
+      .sidebar h2, .sidebar h3, .sidebar a span { display: none; }
+      .main-content { margin-left: 60px; }
+      table, thead, tbody, th, td, tr {
+        display: block;
+      }
+      td {
+        text-align: right;
+        padding-left: 50%;
+        position: relative;
+      }
+      td:before {
+        content: attr(data-label) ": ";
+        position: absolute;
+        left: 10px;
+        width: 45%;
+        font-weight: bold;
+      }
+    }
+  </style>
+</head>
+<body>
+  <aside class="sidebar">
+    <h2>⚙️ Equipamentos</h2>
+    <ul>
+      <li><a href="/">🏠 Início</a></li>
+      <li><a href="/buscar">🔍 Buscar</a></li>
+      <li><a href="/listar">📋 Todos</a></li>
+      <li><a href="/devolvidos" class="active">↩️ Devolvidos</a></li>
+      <li><a href="/atualizar">✏️ Atualizar</a></li>
+    </ul>
+    <h3>— Filtros —</h3>
+    <ul>
+      <li><a href="/listar?status=Em%20uso">✅ Em Uso</a></li>
+      <li><a href="/listar?tipo=Notebook">💻 Notebooks</a></li>
+    </ul>
+  </aside>
+
+  <div class="main-content">
+    <header>
+      <h2>↩️ Equipamentos Devolvidos</h2>
+      <a href="/" class="btn">← Voltar</a>
+    </header>
+
+    <div class="filters">
+      <input type="text" id="search-all" placeholder="🔍 Buscar em devolvidos..." oninput="filtrarTabela()" />
+    </div>
+
+    <div id="loading">Carregando equipamentos devolvidos...</div>
+    <div id="table-container" style="display:none;">
+      <table>
+        <thead>
+          <tr>
+            <th>Patrimônio</th>
+            <th>Tipo</th>
+            <th>Usuário Anterior</th>
+            <th>Cargo</th>
+            <th>Local</th>
+            <th>Data Devolução</th>
+            <th>TeamViewer ID</th>
+            <th>Host (PC)</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="table-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = '/api/equipamentos';
+
+    async function fetchDevolvidos() {
+      const res = await fetch(`${API_URL}?status=Devolvido`);
+      const data = await res.json();
+      return data;
+    }
+
+    function renderTable(dados) {
+      const tbody = document.getElementById('table-body');
+      tbody.innerHTML = '';
+
+      if (dados.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;">Nenhum equipamento devolvido encontrado</td></tr>`;
+        return;
+      }
+
+      dados.forEach(item => {
+        const isNotebook = item.tipo === 'Notebook';
+        const rowClass = isNotebook ? 'notebook-cell' : '';
+
+        const tr = document.createElement('tr');
+        tr.className = rowClass;
+        tr.innerHTML = `
+          <td data-label="Patrimônio">${item.patrimonio || ''}</td>
+          <td data-label="Tipo">${item.tipo || ''}</td>
+          <td data-label="Usuário Anterior">${item.usuario || '<em>Não informado</em>'}</td>
+          <td data-label="Cargo">${item.cargo || ''}</td>
+          <td data-label="Local">${item.local_atual || ''}</td>
+          <td data-label="Data Devolução">${item.data_devolucao || ''}</td>
+          <td data-label="TeamViewer ID">${item.teamviewer_id || ''}</td>
+          <td data-label="Host">${item.host || (isNotebook ? '<span style="color:#e94560">⚠️ Faltante</span>' : '')}</td>
+          <td data-label="Ações" class="actions">
+            <a href="#" onclick="editarRapido('${item.patrimonio}'); return false;">✏️</a>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function editarRapido(patrimonio) {
+      const novoHost = prompt('Host do computador (deixe vazio para remover):');
+      const novoTV = prompt('TeamViewer ID (deixe vazio para remover):', '');
+      
+      if (novoHost === null && novoTV === null) return;
+
+      const dados = {};
+      if (novoHost !== null) dados.host = novoHost || null;
+      if (novoTV !== null) dados.teamviewer_id = novoTV || null;
+
+      if (Object.keys(dados).length === 0) return;
+
+      try {
+        const res = await fetch(`/api/equipamentos/${patrimonio}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(dados)
+        });
+        if (res.ok) {
+          alert('✅ Atualizado com sucesso!');
+          carregarPagina();
+        } else {
+          alert('❌ Erro ao atualizar.');
+        }
+      } catch (err) {
+        alert('Falha: ' + err.message);
+      }
+    }
+
+    function filtrarTabela() {
+      const termo = document.getElementById('search-all').value.toLowerCase();
+      const linhas = document.querySelectorAll('#table-body tr');
+      linhas.forEach(linha => {
+        const texto = linha.textContent.toLowerCase();
+        linha.style.display = texto.includes(termo) ? '' : 'none';
+      });
+    }
+
+    async function carregarPagina() {
+      try {
+        const devolvidos = await fetchDevolvidos();
+        renderTable(devolvidos);
+        document.getElementById('table-container').style.display = 'block';
+        document.getElementById('loading').style.display = 'none';
+      } catch (err) {
+        document.getElementById('loading').textContent = 'Erro: ' + err.message;
+      }
+    }
+
+    carregarPagina();
+  </script>
+</body>
+</html>

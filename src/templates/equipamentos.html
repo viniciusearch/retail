@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Gerenciar Equipamentos</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+
+    body {
+      background: #f5f7fa;
+      padding: 20px;
+      color: #333;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 25px;
+    }
+
+    h1 {
+      color: #0d4a82;
+      margin-bottom: 10px;
+    }
+
+    .stats {
+      background: white;
+      padding: 12px 20px;
+      border-radius: 6px;
+      margin-bottom: 15px;
+      font-weight: bold;
+      color: #0d4a82;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .controls {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      margin-bottom: 25px;
+      display: grid;
+      gap: 15px;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 600;
+      color: #444;
+    }
+
+    .form-group input,
+    .form-group select {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 1rem;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      background: #0d6efd;
+      color: white;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background 0.2s;
+    }
+
+    button:hover {
+      background: #0b5ed7;
+    }
+
+    .btn-devolver { background: #dc3545; }
+    .btn-devolver:hover { background: #c82333; }
+    .btn-receber { background: #28a745; }
+    .btn-receber:hover { background: #218838; }
+    .btn-warning { background: #ffc107; color: #212529; }
+    .btn-warning:hover { background: #e0a800; }
+
+    .results {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      padding: 12px 15px;
+      text-align: left;
+      border-bottom: 1px solid #eee;
+    }
+
+    th {
+      background: #f8f9fa;
+      position: sticky;
+      top: 0;
+    }
+
+    tr:hover {
+      background: #f9f9f9;
+    }
+
+    .status-em-uso { color: #28a745; font-weight: bold; }
+    .status-devolvido { color: #dc3545; font-weight: bold; }
+
+    .actions button {
+      padding: 4px 10px;
+      font-size: 0.85rem;
+      margin-right: 5px;
+    }
+
+    #loading {
+      text-align: center;
+      padding: 30px;
+      color: #666;
+    }
+
+    @media (max-width: 768px) {
+      .controls { grid-template-columns: 1fr; }
+      table, thead, tbody, th, td, tr { display: block; }
+      td {
+        text-align: right;
+        padding-left: 50%;
+        position: relative;
+      }
+      td:before {
+        content: attr(data-label) ": ";
+        position: absolute;
+        left: 10px;
+        width: 45%;
+        font-weight: bold;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🖥️ Gerenciar Equipamentos</h1>
+      <p>Selecione tipos, status, busque e atualize</p>
+    </header>
+
+    <div class="stats" id="contador">Carregando...</div>
+
+    <div class="controls">
+      <div class="form-group">
+        <label>Tipo de Equipamento</label>
+        <select id="tipo-filtro">
+          <option value="">Todos os tipos</option>
+          <option value="Notebook">Notebook</option>
+          <option value="Monitor">Monitor</option>
+          <option value="Desktop">Desktop</option>
+          <option value="Plotter/Impressora">Impressora/Plotter</option>
+          <option value="Tablet">Tablet</option>
+          <option value="Outro">Outro</option>
+        </select>
+      </div>
+
+      <!-- NOVO FILTRO POR STATUS -->
+      <div class="form-group">
+        <label>Status</label>
+        <select id="status-filtro">
+          <option value="">Todos os status</option>
+          <option value="Em uso">Em uso</option>
+          <option value="Devolvido">Devolvido</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Buscar por Patrimônio(s)</label>
+        <input type="text" id="patrimonio-filtro" placeholder="Ex: PAT001, PAT002, NB-123" />
+        <small style="display:block; margin-top:4px; color:#666;">Separe por vírgula ou espaço</small>
+      </div>
+
+      <div class="form-group">
+        <label>&nbsp;</label>
+        <div class="btn-group">
+          <button onclick="carregarEquipamentos()">🔍 Filtrar</button>
+          <button class="btn-warning" onclick="toggleSelecao()">✓ Selecionar todos</button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>&nbsp;</label>
+        <div class="btn-group">
+          <button onclick="exportarCSV()">📥 Exportar CSV</button>
+          <button onclick="exportarPDF()">📄 Exportar PDF</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="loading">Carregando...</div>
+    <div class="results" id="tabela-container" style="display:none;">
+      <div style="padding:12px; background:#f8f9fa; display:flex; gap:10px; flex-wrap:wrap;">
+        <button class="btn-devolver" onclick="atualizarLote('Devolvido')">↩️ Devolver Selecionados</button>
+        <button class="btn-receber" onclick="atualizarLote('Em uso')">✅ Receber Selecionados</button>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th><input type="checkbox" id="selecionar-todos" onchange="toggleTodos()"></th>
+            <th>Patrimônio</th>
+            <th>Tipo</th>
+            <th>Usuário</th>
+            <th>Local</th>
+            <th>Status</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="corpo-tabela"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Bibliotecas para PDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+
+  <script>
+    const API_URL = '/api/equipamentos';
+    let dadosOriginais = [];
+    let todosSelecionados = false;
+
+    async function carregarEquipamentos() {
+      const tipo = document.getElementById('tipo-filtro').value;
+      const status = document.getElementById('status-filtro').value;
+      const patInput = document.getElementById('patrimonio-filtro').value.trim();
+
+      let patrimonios = [];
+      if (patInput) {
+        patrimonios = patInput
+          .split(/[,;\s]+/)
+          .map(p => p.trim())
+          .filter(p => p);
+      }
+
+      try {
+        document.getElementById('loading').style.display = 'block';
+        document.getElementById('tabela-container').style.display = 'none';
+
+        if (patrimonios.length > 0) {
+          const promessas = patrimonios.map(p => 
+            fetch(`${API_URL}?patrimonio=${encodeURIComponent(p)}`).then(r => r.json())
+          );
+          const resultados = await Promise.all(promessas);
+          let dados = resultados.flat();
+
+          // Aplica filtros locais (tipo e status)
+          if (tipo) dados = dados.filter(item => item.tipo === tipo);
+          if (status) dados = dados.filter(item => item.status === status);
+
+          dadosOriginais = dados;
+        } else {
+          const params = new URLSearchParams();
+          if (tipo) params.append('tipo', tipo);
+          if (status) params.append('status', status);
+          
+          const url = `${API_URL}?${params.toString()}`;
+          const res = await fetch(url);
+          dadosOriginais = await res.json();
+        }
+
+        renderizarTabela(dadosOriginais);
+        atualizarContador(dadosOriginais.length);
+      } catch (err) {
+        alert('Erro ao carregar: ' + err.message);
+      } finally {
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('tabela-container').style.display = 'block';
+      }
+    }
+
+    function atualizarContador(total) {
+      document.getElementById('contador').textContent = 
+        `Total de equipamentos encontrados: ${total}`;
+    }
+
+    function renderizarTabela(dados) {
+      const tbody = document.getElementById('corpo-tabela');
+      tbody.innerHTML = '';
+
+      if (dados.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;">Nenhum equipamento encontrado</td></tr>`;
+        return;
+      }
+
+      dados.forEach(item => {
+        const statusClass = 
+          item.status === 'Em uso' ? 'status-em-uso' : 
+          item.status === 'Devolvido' ? 'status-devolvido' : '';
+
+        const acoes = 
+          item.status === 'Em uso' 
+            ? `<button class="btn-devolver" onclick="atualizarStatus('${item.patrimonio}', 'Devolvido')">↩️ Devolver</button>`
+            : `<button class="btn-receber" onclick="atualizarStatus('${item.patrimonio}', 'Em uso')">✅ Receber</button>`;
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><input type="checkbox" class="checkbox-item" data-pat="${item.patrimonio}"></td>
+          <td data-label="Patrimônio">${item.patrimonio || ''}</td>
+          <td data-label="Tipo">${item.tipo || ''}</td>
+          <td data-label="Usuário">${item.usuario || ''}</td>
+          <td data-label="Local">${item.local_atual || ''}</td>
+          <td data-label="Status"><span class="${statusClass}">${item.status || ''}</span></td>
+          <td data-label="Ações" class="actions">${acoes}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      document.getElementById('selecionar-todos').checked = false;
+      todosSelecionados = false;
+    }
+
+    function toggleTodos() {
+      const checkboxes = document.querySelectorAll('.checkbox-item');
+      const checked = document.getElementById('selecionar-todos').checked;
+      checkboxes.forEach(cb => cb.checked = checked);
+    }
+
+    function toggleSelecao() {
+      todosSelecionados = !todosSelecionados;
+      const btn = document.querySelector('.btn-warning');
+      btn.textContent = todosSelecionados ? '✗ Limpar seleção' : '✓ Selecionar todos';
+      
+      const checkboxes = document.querySelectorAll('.checkbox-item');
+      checkboxes.forEach(cb => cb.checked = todosSelecionados);
+      document.getElementById('selecionar-todos').checked = todosSelecionados;
+    }
+
+    async function atualizarStatus(patrimonio, novoStatus) {
+      if (!confirm(`Tem certeza que deseja marcar ${patrimonio} como "${novoStatus}"?`)) {
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_URL}/${patrimonio}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: novoStatus })
+        });
+
+        if (res.ok) {
+          alert('✅ Status atualizado com sucesso!');
+          carregarEquipamentos();
+        } else {
+          const erro = await res.json();
+          alert('❌ Erro: ' + (erro.erro || 'Falha ao salvar'));
+        }
+      } catch (err) {
+        alert('Erro de conexão: ' + err.message);
+      }
+    }
+
+    async function atualizarLote(novoStatus) {
+      const selecionados = Array.from(document.querySelectorAll('.checkbox-item:checked'))
+        .map(cb => cb.dataset.pat);
+
+      if (selecionados.length === 0) {
+        alert('⚠️ Nenhum equipamento selecionado.');
+        return;
+      }
+
+      if (!confirm(`Atualizar ${selecionados.length} equipamento(s) para "${novoStatus}"?`)) {
+        return;
+      }
+
+      let sucesso = 0;
+      for (const pat of selecionados) {
+        try {
+          const res = await fetch(`${API_URL}/${pat}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: novoStatus })
+          });
+          if (res.ok) sucesso++;
+        } catch (e) {
+          console.error('Falha ao atualizar', pat, e);
+        }
+      }
+
+      alert(`✅ ${sucesso} de ${selecionados.length} atualizado(s) com sucesso!`);
+      carregarEquipamentos();
+    }
+
+    // Função para exportar CSV
+    function exportarCSV() {
+      if (dadosOriginais.length === 0) {
+        alert('Nenhum dado para exportar.');
+        return;
+      }
+
+      const colunas = ['Patrimônio', 'Tipo', 'Usuário', 'Cargo', 'Setor', 'Local', 'Status', 'TeamViewer ID', 'Host'];
+      let csv = colunas.join(',') + '\n';
+
+      dadosOriginais.forEach(item => {
+        const linha = [
+          `"${(item.patrimonio || '').replace(/"/g, '""')}"`,
+          `"${(item.tipo || '').replace(/"/g, '""')}"`,
+          `"${(item.usuario || '').replace(/"/g, '""')}"`,
+          `"${(item.cargo || '').replace(/"/g, '""')}"`,
+          `"${(item.setor || '').replace(/"/g, '""')}"`,
+          `"${(item.local_atual || '').replace(/"/g, '""')}"`,
+          `"${(item.status || '').replace(/"/g, '""')}"`,
+          `"${(item.teamviewer_id || '').replace(/"/g, '""')}"`,
+          `"${(item.host || '').replace(/"/g, '""')}"`
+        ].join(',');
+        csv += linha + '\n';
+      });
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `equipamentos_${new Date().toISOString().slice(0,10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    // Função para exportar PDF
+    // Função para exportar PDF com as colunas solicitadas
+/* function exportarPDF() {
+  if (dadosOriginais.length === 0) {
+    alert('Nenhum dado para exportar.');
+    return;
+  }
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+
+  // Título
+  doc.setFontSize(16);
+  doc.text('Relatório de Equipamentos', 14, 20);
+
+  // Data
+  const data = new Date().toLocaleDateString('pt-BR');
+  doc.setFontSize(12);
+  doc.text(`Data: ${data}`, 14, 28);
+
+  // Colunas solicitadas
+  const colunas = ['Centro de Custo', 'Patrimônio', 'Descritivo', 'Tipo'];
+  const linhas = dadosOriginais.map(item => [
+    item.centro_custo || '',
+    item.patrimonio || '',
+    item.descritivo || '',
+    item.tipo || ''
+  ]);
+
+  // Gera tabela
+  doc.autoTable({
+    startY: 35,
+    head: [colunas],
+    body: linhas,
+    theme: 'grid',
+    styles: { fontSize: 9 },
+    headStyles: { fillColor: [13, 74, 130] },
+    columnStyles: {
+      0: { cellWidth: 40 },   // Centro de Custo
+      1: { cellWidth: 35 },   // Patrimônio
+      2: { cellWidth: 70 },   // Descritivo
+      3: { cellWidth: 35 }    // Tipo
+    }
+  });
+
+  // Salva PDF
+  doc.save(`equipamentos_${new Date().toISOString().slice(0,10)}.pdf`);
+} */
+
+// Função para exportar PDF com agrupamento por tipo
+// Função para exportar PDF com agrupamento por tipo (versão compatível)
+function exportarPDF() {
+  if (dadosOriginais.length === 0) {
+    alert('Nenhum dado para exportar.');
+    return;
+  }
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+
+  // Título principal
+  doc.setFontSize(16);
+  doc.text('Relatório de Equipamentos', 14, 20);
+
+  // Data
+  const data = new Date().toLocaleDateString('pt-BR');
+  doc.setFontSize(12);
+  doc.text(`Data: ${data}`, 14, 28);
+
+  // Agrupa e ordena
+  const grupos = {};
+  dadosOriginais.forEach(item => {
+    const tipo = item.tipo || 'Sem tipo';
+    if (!grupos[tipo]) grupos[tipo] = [];
+    grupos[tipo].push(item);
+  });
+
+  const tiposOrdenados = Object.keys(grupos).sort();
+
+  // Prepara os dados para uma única tabela com cabeçalhos de grupo
+  const colunas = ['Centro de Custo', 'Patrimônio', 'Descritivo'];
+  const corpo = [];
+
+  tiposOrdenados.forEach(tipo => {
+    const itens = grupos[tipo];
+    
+    // Adiciona linha de título do grupo
+    corpo.push([
+      { content: `${tipo} (${itens.length})`, colSpan: 3, styles: { fillColor: [230, 230, 230], fontStyle: 'bold' } }
+    ]);
+
+    // Adiciona os itens
+    itens.forEach(item => {
+      corpo.push([
+        item.centro_custo || '',
+        item.patrimonio || '',
+        item.descritivo || ''
+      ]);
+    });
+  });
+
+  // Gera tabela única
+  doc.autoTable({
+    startY: 35,
+    head: [colunas],
+    body: corpo,
+    theme: 'grid',
+    styles: { fontSize: 9 },
+    headStyles: { fillColor: [13, 74, 130] },
+    columnStyles: {
+      0: { cellWidth: 40 },
+      1: { cellWidth: 35 },
+      2: { cellWidth: 85 }
+    }
+  });
+
+  doc.save(`equipamentos_por_tipo_${new Date().toISOString().slice(0,10)}.pdf`);
+}
+    window.onload = () => {
+      carregarEquipamentos();
+    };
+
+    document.getElementById('patrimonio-filtro').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') carregarEquipamentos();
+    });
+  </script>
+</body>
+</html>

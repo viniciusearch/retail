@@ -35,6 +35,9 @@ def buscar_equipamentos(filtros: dict):
     if filtros.get("status"):
         query += " AND status = ?"
         params.append(filtros['status'])
+    if filtros.get("cargo"):  # ← novo filtro por cargo
+        query += " AND cargo LIKE ?"
+        params.append(f"%{filtros['cargo']}%")
 
     query += " ORDER BY usuario, tipo"
 
@@ -42,15 +45,26 @@ def buscar_equipamentos(filtros: dict):
         return conn.execute(query, params).fetchall()
 
 def atualizar_equipamento(patrimonio: str, dados: dict):
-    if not dados:
+    # Campos permitidos para atualização (segurança)
+    campos_permitidos = {
+        "status", "data_recebimento", "data_devolucao",
+        "valor_locacao", "local_atual", "usuario", "teamviewer_id", "cargo",
+        "host", "descritivo", "centro_custo", "numero_serie"
+    }
+    
+    # Filtra apenas os campos válidos
+    dados_filtrados = {k: v for k, v in dados.items() if k in campos_permitidos}
+    
+    if not dados_filtrados:
         return False
-        
-    set_clause = ", ".join([f"{k} = ?" for k in dados.keys()])
-    params = list(dados.values()) + [patrimonio]
+
+    set_clause = ", ".join([f"{k} = ?" for k in dados_filtrados.keys()])
+    params = list(dados_filtrados.values()) + [patrimonio]
 
     query = f"UPDATE equipamentos SET {set_clause} WHERE patrimonio = ?"
     
     with get_db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute(query, params)
+        conn.commit()
         return cursor.rowcount > 0
