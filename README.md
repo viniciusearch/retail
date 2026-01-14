@@ -1,65 +1,141 @@
-# Field Equipment Tracker
+# Sistema completo para gestão de ativos de TI
 
-A lightweight, offline tool for civil engineering sites to manage IT assets (notebooks, desktops, monitors, Small PCs, printers, plotters) and generate printable responsibility terms upon delivery or return.
+Sistema com funcionalidades para cadastro, atualização, visualização, exclusão e relatórios de equipamentos.
 
-## Purpose
-Replace manual Excel tracking with a fast, searchable interface and automated PDF term generation—designed for Tier-1 support staff with no internet, admin rights, or server access.
+## 📋 Funcionalidades
 
-## Features
-- **Search by multiple criteria**:  
-  - Equipment type (`Notebook`, `Desktop`, `Monitor`, `Small PC`, etc.)  
-  - Cost Center  
-  - Current Location  
-  - Sector  
-  - User Name  
-  - User Role  
-- **View full equipment record**:  
-  `Model`, `Serial Number`, `Asset ID`, `TeamViewer ID`, `User`, `Role`, `Cost Center`, `Sector`, `Current Location`, `Notes`  
-- **Generate printable PDF term** on delivery/return:  
-  - Pre-filled with equipment and user data  
-  - Signature fields for user and technician  
-  - Auto-saved with timestamp and action type  
-- **100% offline** – runs on local Windows notebook (no cloud, no domain)
+- Cadastro de equipamentos com campos técnicos (patrimônio, tipo, descritivo, número de série, etc.)
+- Atualização em lote de status (**Em uso** / **Devolvido**)
+- Exclusão individual e em lote de ativos
+- Visualização detalhada com modal editável
+- Filtros avançados por tipo, status, patrimônio, usuário, local, etc.
+- Exportação de relatórios em **CSV** e **PDF**
+- Dashboard interativo com gráficos e métricas
+- Ordenação e reorganização de colunas (**DataTables + ColReorder**)
+- Busca integrada com DataTables
+- Cadastro rápido via modal em qualquer página
 
-## Requirements
-- Windows 10/11 (standard site notebook)  
-- Python 3.8+  
-- Install once:  
-  ```bash
-  pip install fpdf2
+## 🛠️ Tecnologias Utilizadas
 
-  
----
+- **Backend**: Python 3.8+, Flask  
+- **Frontend**: HTML5, CSS3, JavaScript, Bootstrap 5, DataTables  
+- **Banco de dados**: SQLite  
+- **Bibliotecas**: Chart.js, jsPDF, jQuery  
 
-### 🇧🇷 **(Português)**
+## 📥 Pré-requisitos
 
-```markdown
-# Field Equipment Tracker
+- Python 3.8 ou superior  
+- `pip` (gerenciador de pacotes do Python)
 
-Ferramenta leve e offline para canteiros de obra controlarem ativos de TI (notebooks, desktops, monitores, Small PCs, impressoras, plotters) e gerarem termos de responsabilidade impressos na entrega ou devolução.
+## 🚀 Instalação
 
-## Objetivo
-Substituir o controle manual em planilha por uma interface rápida, com busca simples e geração automática de termo em PDF — feita para suporte N1, sem internet, sem acesso administrativo e sem dependência de servidores.
+### Linux / macOS
 
-## Funcionalidades
-- **Busca por múltiplos critérios**:  
-  - Tipo de equipamento (`Notebook`, `Desktop`, `Monitor`, `Small PC`, etc.)  
-  - Centro de Custo  
-  - Local Atual  
-  - Setor  
-  - Nome do Usuário  
-  - Função do Usuário  
-- **Exibe todos os dados do equipamento**:  
-  `Modelo`, `Número de Série`, `Patrimônio`, `ID do TeamViewer`, `Usuário`, `Função`, `Centro de Custo`, `Setor`, `Local Atual`, `Observação`  
-- **Gera PDF do termo na hora**:  
-  - Dados pré-preenchidos  
-  - Campos para assinatura do usuário e do técnico  
-  - Salvo com data, hora e tipo de ação (entrega/devolução)  
-- **Totalmente offline** – roda no notebook da obra (Windows 10/11)
+```bash
+# 1. Clone o repositório
+git clone https://github.com/seu-usuario/sistema-equipamentos.git
+cd sistema-equipamentos
 
-## Requisitos
-- Notebook com Windows 10/11  
-- Python 3.8+  
-- Executar uma vez:  
-  ```bash
-  pip install fpdf2
+# 2. Crie um ambiente virtual (recomendado)
+python3 -m venv venv
+source venv/bin/activate  # Linux/macOS
+
+# 3. Instale as dependências
+pip install -r requirements.txt
+```
+
+### Windows
+
+```cmd
+# 1. Clone o repositório
+git clone https://github.com/seu-usuario/sistema-equipamentos.git
+cd sistema-equipamentos
+
+# 2. Crie um ambiente virtual (recomendado)
+python -m venv venv
+venv\Scripts\activate
+
+# 3. Instale as dependências
+pip install -r requirements.txt
+```
+## 🔧 Arquivos de Configuração
+- requirements.txt
+- app.py (exemplo)
+- init_db.py (exemplo)  
+ 
+ Exemplo de init_db.py:
+
+```python
+import sqlite3
+import os
+
+DB_PATH = 'data/equipamentos.db'
+
+# Cria diretório se não existir
+os.makedirs('data', exist_ok=True)
+
+# Cria tabela
+conn = sqlite3.connect(DB_PATH)
+# ... (lógica de criação da tabela)
+```
+
+## 🌐 Acesso à Aplicação
+Após iniciar a aplicação, acesse:
+
+Local: http://localhost:5000  
+Codespace: https://[seu-codespace]-5000.app.github.dev
+
+## 🗂️ Estrutura de Diretórios
+
+```dir
+sistema-equipamentos/
+├── app.py                 # Ponto de entrada da aplicação
+├── init_db.py             # Script de inicialização do banco
+├── requirements.txt       # Dependências do Python
+├── data/
+│   └── equipamentos.db    # Banco de dados SQLite
+├── src/
+│   ├── routes.py          # Rotas da API
+│   ├── models.py          # Lógica de acesso ao banco
+│   └── web.py             # Rotas web
+```
+
+## 🎯 Uso Básico
+- Acesse o dashboard para visão geral dos equipamentos
+- Clique em "Novo Ativo" para cadastrar equipamentos
+- Use a página "Gerenciar" para:
+    - Filtrar equipamentos por diversos critérios
+    - Atualizar status em lote
+    - Excluir ativos indesejados
+    - Exportar relatórios
+- Clique no ícone de olho para visualizar/editar detalhes
+- Use o campo de busca para encontrar equipamentos rapidamente
+
+## 🔒 Segurança
+- Exclusão permanente requer confirmação explícita
+- Validação de campos obrigatórios no frontend e backend
+- Proteção contra duplicação de patrimônio
+- Métodos HTTP apropriados (DELETE para exclusão, PATCH para atualização)
+
+## 📊 Relatórios Disponíveis
+### CSV
+- Todos os campos do equipamento
+- Compatível com Excel e planilhas
+### PDF
+- Agrupado por tipo de equipamento
+- Inclui Descritivo, Patrimônio e Número de Série
+- Formato profissional para impressão
+
+## 🔄 Atualizações Futuras
+- Paginação na API (server-side)
+- Histórico de alterações
+- Backup automático do banco
+- Autenticação de usuários
+
+## 🆘 Suporte
+Para problemas de instalação ou uso:
+
+- Verifique se todas as dependências estão instaladas
+- Confirme se o banco de dados foi inicializado
+- Consulte o console do navegador para erros JavaScript
+- Verifique o terminal para erros do servidor

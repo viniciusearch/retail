@@ -38,6 +38,23 @@
     font-weight: 600;
     color: #495057;
   }
+  
+  /* Alinha ícones em linha e ajusta espaçamento */
+  .acoes-btn-group {
+    display: flex;
+    gap: 4px;
+    justify-content: center;
+  }
+  
+  .acoes-btn-group .btn {
+    padding: 2px 6px;
+    font-size: 0.85rem;
+    line-height: 1;
+  }
+  
+  .acoes-btn-group .btn i {
+    font-size: 1rem;
+  }
 </style>
 
 <!-- Bibliotecas para PDF -->
@@ -49,9 +66,9 @@
 <header class="d-flex justify-content-between align-items-center mb-3">
   <h4 class="mb-0"><i class="bi bi-table me-2"></i>Gerenciar Equipamentos</h4>
   <div>
- <button class="btn btn-sm btn-outline-primary me-2" data-bs-toggle="modal" data-bs-target="#modalCadastro">
-  <i class="bi bi-plus-circle me-1"></i> Novo Ativo
-</button>
+    <button class="btn btn-sm btn-outline-primary me-2" data-bs-toggle="modal" data-bs-target="#modalCadastro">
+      <i class="bi bi-plus-circle me-1"></i> Novo Ativo
+    </button>
     <a href="/" class="btn btn-sm btn-outline-secondary">
       <i class="bi bi-arrow-left me-1"></i> Voltar
     </a>
@@ -95,7 +112,7 @@
         <div class="form-text small">Separe por vírgula ou espaço</div>
       </div>
       
-      <div class="col-md-2 d-flex align-items-end">
+      <div class="col-md-2 d-flex align-items-start">
         <button onclick="carregarEquipamentos()" class="btn btn-primary btn-sm w-100">
           <i class="bi bi-search me-1"></i> Filtrar
         </button>
@@ -310,18 +327,6 @@
           item.status === 'Em uso' ? 'status-em-uso' : 
           item.status === 'Devolvido' ? 'status-devolvido' : '';
 
-        const acoes = `
-          <button class="btn btn-sm btn-outline-primary me-1" onclick="abrirModal('${item.patrimonio}')">
-            <i class="bi bi-eye"></i>
-          </button>
-          <button class="btn btn-sm btn-outline-danger me-1" onclick="atualizarStatus('${item.patrimonio}', 'Devolvido')">
-            <i class="bi bi-arrow-return-left"></i>
-          </button>
-          <button class="btn btn-sm btn-outline-warning" onclick="deletarEquipamento('${item.patrimonio}')">
-            <i class="bi bi-trash"></i>
-          </button>
-        `;
-
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td><input type="checkbox" class="checkbox-item" data-pat="${item.patrimonio}"></td>
@@ -331,12 +336,24 @@
           <td>${item.usuario || ''}</td>
           <td>${item.local_atual || ''}</td>
           <td><span class="${statusClass}">${item.status || ''}</span></td>
-          <td>${acoes}</td>
+          <td>
+            <div class="acoes-btn-group">
+              <button class="btn btn-sm btn-outline-primary" onclick="abrirModal('${item.patrimonio}')">
+                <i class="bi bi-eye"></i>
+              </button>
+              <button class="btn btn-sm btn-outline-danger" onclick="atualizarStatus('${item.patrimonio}', 'Devolvido')">
+                <i class="bi bi-arrow-return-left"></i>
+              </button>
+              <button class="btn btn-sm btn-outline-warning" onclick="deletarEquipamento('${item.patrimonio}')">
+                <i class="bi bi-trash"></i>
+              </button>
+            </div>
+          </td>
         `;
         tbody.appendChild(tr);
       });
 
-      // Inicializa o DataTables
+      // Inicializa o DataTables com larguras definidas
       tabela = new DataTable('#tabela-equipamentos', {
         responsive: true,
         paging: true,
@@ -345,6 +362,16 @@
         searching: true,
         ordering: true,
         info: true,
+        columnDefs: [
+          { width: '3%', targets: 0 },      // Checkbox
+          { width: '8%', targets: 1 },      // Patrimônio
+          { width: '12%', targets: 2 },     // Nº Série
+          { width: '8%', targets: 3 },      // Tipo
+          { width: '15%', targets: 4 },     // Usuário
+          { width: '12%', targets: 5 },     // Local
+          { width: '8%', targets: 6 },      // Status
+          { width: '10%', targets: 7 }      // Ações
+        ],
         language: {
           url: "https://cdn.datatables.net/plug-ins/2.3.6/i18n/pt-BR.json"
         }
@@ -359,6 +386,8 @@
       document.getElementById('loading').style.display = 'none';
     }
   }
+
+  // ... resto das funções permanecem exatamente iguais ...
 
   // Função para abrir o modal de detalhes
   async function abrirModal(patrimonio) {
