@@ -82,3 +82,21 @@ def atualizar(patrimonio):
         return jsonify({"mensagem": "Equipamento atualizado"}), 200
     else:
         return jsonify({"erro": "Equipamento não encontrado"}), 404
+
+@api_bp.route('/equipamentos/<patrimonio>', methods=['DELETE'])
+def deletar_equipamento(patrimonio):
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            # Verifica se existe
+            cursor.execute("SELECT patrimonio FROM equipamentos WHERE patrimonio = ?", (patrimonio,))
+            if not cursor.fetchone():
+                return jsonify({"erro": "Equipamento não encontrado"}), 404
+            
+            # Deleta
+            cursor.execute("DELETE FROM equipamentos WHERE patrimonio = ?", (patrimonio,))
+            conn.commit()
+            
+        return jsonify({"mensagem": f"Equipamento {patrimonio} excluído com sucesso"}), 200
+    except Exception as e:
+        return jsonify({"erro": f"Erro ao excluir: {str(e)}"}), 500

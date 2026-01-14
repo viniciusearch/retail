@@ -1,444 +1,302 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Atualizar Equipamentos</title>
-  <style>
-    :root {
-      --dark: #1a1a2e;
-      --darker: #0f3460;
-      --accent: #e94560;
-      --light: #ffffff;
-      --gray: #2a2a3c;
-      --success: #4caf50;
-    }
+{% extends "base.html" %}
 
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    }
+{% block title %}Atualizar Equipamentos{% endblock %}
 
-    body {
-      background-color: #f5f5f5;
-      display: flex;
-      min-height: 100vh;
-    }
+{% block extra_css %}
+<style>
+  .accordion-header {
+    background: #f8f9fa;
+    cursor: pointer;
+    font-weight: 600;
+    border-bottom: 1px solid #eee;
+    padding: 0.75rem 1rem;
+  }
+  
+  .accordion-header:hover {
+    background: #e9ecef;
+  }
+  
+  .status-badge {
+    background: #e8f5e9;
+    color: #2e7d32;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: bold;
+  }
+  
+  .notebook-highlight {
+    border-left: 4px solid var(--accent);
+  }
+  
+  /* Títulos menores */
+  .title-large {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+  }
+  
+  .title-small {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+  }
+  
+  .form-label {
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+  
+  .form-control, .form-select {
+    font-size: 0.85rem;
+    padding: 0.5rem 0.75rem;
+  }
+</style>
+{% endblock %}
 
-    .sidebar {
-      width: 220px;
-      background: var(--dark);
-      color: var(--light);
-      padding: 20px 0;
-      position: fixed;
-      height: 100%;
-      overflow-y: auto;
-    }
+{% block content %}
+<header class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="mb-0"><i class="bi bi-pencil-square me-2"></i>Atualizar Equipamentos por Usuário</h4>
+  <a href="/" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i> Voltar
+  </a>
+</header>
 
-    .sidebar h2 {
-      padding: 0 20px 20px;
-      font-size: 1.4rem;
-      color: var(--accent);
-      border-bottom: 1px solid rgba(255,255,255,0.1);
-    }
-
-    .sidebar ul {
-      list-style: none;
-      padding: 0;
-    }
-
-    .sidebar li {
-      padding: 10px 20px;
-    }
-
-    .sidebar a {
-      color: var(--light);
-      text-decoration: none;
-      display: block;
-      font-weight: 500;
-    }
-
-    .sidebar a:hover, .sidebar a.active {
-      color: var(--accent);
-    }
-
-    .main-content {
-      flex: 1;
-      margin-left: 220px;
-      padding: 20px;
-    }
-
-    header {
-      background: var(--darker);
-      padding: 15px 20px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      color: white;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-      margin-bottom: 25px;
-    }
-
-    .search-box {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 25px;
-      flex-wrap: wrap;
-    }
-
-    .search-box input {
-      padding: 10px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      font-size: 1rem;
-      min-width: 250px;
-    }
-
-    .btn {
-      padding: 10px 16px;
-      border: none;
-      border-radius: 4px;
-      font-weight: bold;
-      cursor: pointer;
-    }
-
-    .btn-primary { background: var(--accent); color: white; }
-    .btn-secondary { background: #6c757d; color: white; }
-    .btn-success { background: var(--success); color: white; }
-    .btn-sm { padding: 6px 10px; font-size: 0.9rem; }
-
-    .btn:hover { opacity: 0.9; }
-
-    #message {
-      padding: 12px;
-      margin: 20px 0;
-      border-radius: 4px;
-      display: none;
-    }
-
-    .msg-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-    .msg-error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
-
-    .accordion {
-      width: 100%;
-      border: 1px solid #ddd;
-      border-radius: 6px;
-      margin-bottom: 15px;
-      overflow: hidden;
-    }
-
-    .accordion-header {
-      background: #f8f9fa;
-      padding: 14px 16px;
-      cursor: pointer;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-weight: 600;
-      border-bottom: 1px solid #eee;
-    }
-
-    .accordion-header:hover {
-      background: #e9ecef;
-    }
-
-    .accordion-icon {
-      transition: transform 0.2s;
-    }
-
-    .accordion.open .accordion-icon {
-      transform: rotate(180deg);
-    }
-
-    .accordion-body {
-      padding: 0;
-      max-height: 0;
-      overflow: hidden;
-      transition: max-height 0.3s ease-out, padding 0.3s ease;
-    }
-
-    .accordion.open .accordion-body {
-      padding: 20px;
-      max-height: 1000px;
-    }
-
-    .form-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 15px;
-      margin-top: 10px;
-    }
-
-    .form-group {
-      margin-bottom: 12px;
-    }
-
-    .form-group label {
-      display: block;
-      margin-bottom: 4px;
-      font-weight: 600;
-      font-size: 0.9rem;
-      color: #444;
-    }
-
-    .form-group input, .form-group select {
-      width: 100%;
-      padding: 8px 10px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      font-size: 0.95rem;
-    }
-
-    .form-footer {
-      margin-top: 20px;
-      display: flex;
-      gap: 10px;
-      justify-content: flex-end;
-    }
-
-    .notebook-highlight {
-      border-left: 4px solid var(--accent);
-    }
-
-    .status-badge {
-      background: #e8f5e9;
-      color: #2e7d32;
-      padding: 2px 8px;
-      border-radius: 12px;
-      font-size: 0.75rem;
-      font-weight: bold;
-    }
-
-    @media (max-width: 768px) {
-      .sidebar { width: 60px; padding: 10px 0; }
-      .sidebar h2, .sidebar a span { display: none; }
-      .main-content { margin-left: 60px; }
-      .search-box { flex-direction: column; }
-    }
-  </style>
-</head>
-<body>
-  <aside class="sidebar">
-    <h2>⚙️ Equipamentos</h2>
-    <ul>
-      <li><a href="/">🏠 Início</a></li>
-      <li><a href="/buscar">🔍 Buscar</a></li>
-      <li><a href="/listar">📋 Listar</a></li>
-      <li><a href="/atualizar" class="active">✏️ Atualizar</a></li>
-      <li><a href="/atualizar-teamviewer">🖥️ TeamViewer</a></li>
-    </ul>
-  </aside>
-
-  <div class="main-content">
-    <header>
-      <h2>✏️ Atualizar Equipamentos por Usuário</h2>
-      <a href="/" class="btn btn-secondary">← Voltar</a>
-    </header>
-
-    <div class="search-box">
-      <input type="text" id="search-input" placeholder="Digite patrimônio ou nome do usuário..." />
-      <button class="btn btn-primary" onclick="buscarEquipamentos()">Buscar</button>
+<div class="card mb-3">
+  <div class="card-body p-3">
+    <div class="row g-2">
+      <div class="col-md-10">
+        <input type="text" id="search-input" class="form-control form-control-lg" placeholder="Digite patrimônio ou nome do usuário...">
+      </div>
+      <div class="col-md-2">
+        <button class="btn btn-primary w-100" onclick="buscarEquipamentos()">
+          <i class="bi bi-search me-1"></i> Buscar
+        </button>
+      </div>
     </div>
-
-    <div id="message"></div>
-    <div id="results-container" style="display:none;"></div>
   </div>
+</div>
 
-  <script>
-    const API_URL = '/api/equipamentos';
+<div id="message" class="alert alert-dismissible fade show mb-3" role="alert" style="display:none;">
+  <span id="message-text"></span>
+  <button type="button" class="btn-close" onclick="hideMessage()"></button>
+</div>
 
-    async function buscarEquipamentos() {
-      const termo = document.getElementById('search-input').value.trim();
-      if (!termo) {
-        showMessage('Digite um patrimônio ou nome de usuário.', 'error');
+<div id="results-container" style="display:none;"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  const API_URL = '/api/equipamentos';
+
+  async function buscarEquipamentos() {
+    const termo = document.getElementById('search-input').value.trim();
+    if (!termo) {
+      showMessage('Digite um patrimônio ou nome de usuário.', 'danger');
+      return;
+    }
+
+    try {
+      let dados = [];
+      const resPat = await fetch(`${API_URL}?patrimonio=${encodeURIComponent(termo)}`);
+      const dataPat = await resPat.json();
+      if (dataPat.length > 0) {
+        dados = dataPat;
+      } else {
+        const resUser = await fetch(`${API_URL}?usuario=${encodeURIComponent(termo)}`);
+        dados = await resUser.json();
+      }
+
+      if (dados.length === 0) {
+        showMessage('Nenhum equipamento encontrado.', 'warning');
+        document.getElementById('results-container').style.display = 'none';
         return;
       }
 
-      try {
-        let dados = [];
-        const resPat = await fetch(`${API_URL}?patrimonio=${encodeURIComponent(termo)}`);
-        const dataPat = await resPat.json();
-        if (dataPat.length > 0) {
-          dados = dataPat;
-        } else {
-          const resUser = await fetch(`${API_URL}?usuario=${encodeURIComponent(termo)}`);
-          dados = await resUser.json();
-        }
-
-        if (dados.length === 0) {
-          showMessage('Nenhum equipamento encontrado.', 'error');
-          document.getElementById('results-container').style.display = 'none';
-          return;
-        }
-
-        renderizarAcordeao(dados);
-        document.getElementById('results-container').style.display = 'block';
-        hideMessage();
-      } catch (err) {
-        showMessage('Erro ao buscar: ' + err.message, 'error');
-      }
+      renderizarAcordeao(dados);
+      document.getElementById('results-container').style.display = 'block';
+      hideMessage();
+    } catch (err) {
+      showMessage('Erro ao buscar: ' + err.message, 'danger');
     }
+  }
 
-    function renderizarAcordeao(equipamentos) {
-      const container = document.getElementById('results-container');
-      let html = `<h3 style="margin: 0 0 15px; color: var(--darker);">
-        Encontrado(s) ${equipamentos.length} equipamento(s):
-      </h3>`;
+  function renderizarAcordeao(equipamentos) {
+    const container = document.getElementById('results-container');
+    let html = `<h5 class="mb-3">Encontrado(s) ${equipamentos.length} equipamento(s):</h5>`;
 
-      equipamentos.forEach((item, index) => {
-        const isNotebook = item.tipo === 'Notebook';
-        const statusClass = item.status === 'Em uso' ? 'success' : 'warning';
+    equipamentos.forEach((item, index) => {
+      const isNotebook = item.tipo === 'Notebook';
+      const statusClass = item.status === 'Em uso' ? 'success' : 'warning';
 
-        html += `
-          <div class="accordion notebook-highlight" id="acc-${index}">
-            <div class="accordion-header" onclick="toggleAccordion(${index})">
-              <div>
-                <strong>${item.patrimonio}</strong> — ${item.tipo || '—'}
-                ${item.usuario ? `<br><small>${item.usuario}</small>` : ''}
-              </div>
-              <div>
-                <span class="status-badge">${item.status || '—'}</span>
-                <span class="accordion-icon">▼</span>
-              </div>
-            </div>
-            <div class="accordion-body">
-              <div class="form-grid">
-                <div class="form-group">
-                  <label>Patrimônio</label>
-                  <input type="text" id="pat_${index}" value="${item.patrimonio}" readonly />
+      html += `
+        <div class="accordion notebook-highlight mb-3" id="acc-${index}">
+          <div class="accordion-item">
+            <h2 class="accordion-header" id="heading-${index}" onclick="toggleAccordion(${index})">
+              <div class="d-flex justify-content-between align-items-center w-100">
+                <div>
+                  <h6 class="mb-0">
+                    <strong>${item.patrimonio}</strong> — ${item.tipo || '—'}
+                    ${item.usuario ? `<br><small class="text-muted">${item.usuario}</small>` : ''}
+                  </h6>
                 </div>
-                <div class="form-group">
-                  <label>Tipo</label>
-                  <input type="text" value="${item.tipo || ''}" readonly />
-                </div>
-                <div class="form-group">
-                  <label>Descritivo</label>
-                  <input type="text" id="descritivo_${index}" value="${item.descritivo || ''}" placeholder="Ex: Dell Latitude 5420, i5, 16GB RAM" />
-                </div>
-                  <div class="form-group">
-                  <label>Número de Série</label>
-                  <input type="text" id="numero_serie_${index}" value="${item.numero_serie || ''}" placeholder="Ex: 1234567890" />
-                </div>
-                <div class="form-group">
-                  <label>Centro de Custo</label>
-                  <input type="text" id="centro_custo_${index}" value="${item.centro_custo || ''}" placeholder="Ex: ENG-01, ADM-05" />
-                </div>
-                <div class="form-group">
-                  <label>Usuário</label>
-                  <input type="text" id="usuario_${index}" value="${item.usuario || ''}" />
-                </div>
-                <div class="form-group">
-                  <label>Cargo</label>
-                  <input type="text" id="cargo_${index}" value="${item.cargo || ''}" />
-                </div>
-                <div class="form-group">
-                  <label>Setor</label>
-                  <input type="text" id="setor_${index}" value="${item.setor || ''}" />
-                </div>
-                <div class="form-group">
-                  <label>Local</label>
-                  <input type="text" id="local_${index}" value="${item.local_atual || ''}" />
-                </div>
-                <div class="form-group">
-                  <label>Status</label>
-                  <select id="status_${index}">
-                    <option value="Em uso" ${item.status === 'Em uso' ? 'selected' : ''}>Em uso</option>
-                    <option value="Devolvido" ${item.status === 'Devolvido' ? 'selected' : ''}>Devolvido</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label>TeamViewer ID</label>
-                  <input type="text" id="tv_${index}" value="${item.teamviewer_id || ''}" placeholder="123 456 789" />
-                </div>
-                ${isNotebook ? `
-                <div class="form-group">
-                  <label>Nome do Host (PC)</label>
-                  <input type="text" id="host_${index}" value="${item.host || ''}" placeholder="ex: DESKTOP-ABC123" />
-                </div>
-                ` : ''}
-                <div class="form-group">
-                  <label>Data Devolução</label>
-                  <input type="date" id="devolucao_${index}" value="${item.data_devolucao || ''}" />
+                <div class="d-flex align-items-center gap-2">
+                  <span class="status-badge">${item.status || '—'}</span>
+                  <i class="bi bi-chevron-down accordion-icon"></i>
                 </div>
               </div>
-              <div class="form-footer">
-                <button class="btn btn-success" onclick="salvarEquipamento(${index}, '${item.patrimonio}')">
-                  ✅ Salvar Alterações
-                </button>
-              </div>
-              <div style="margin-top:10px; font-size:0.85rem; color:#666;">
-                Última atualização: ${item.data_recebimento || '—'}
+            </h2>
+            <div id="collapse-${index}" class="accordion-collapse collapse">
+              <div class="accordion-body p-3">
+                <div class="row g-3">
+                  <div class="col-md-6 col-lg-4">
+                    <label class="form-label">Patrimônio</label>
+                    <input type="text" class="form-control" value="${item.patrimonio}" readonly />
+                  </div>
+                  <div class="col-md-6 col-lg-4">
+                    <label class="form-label">Tipo</label>
+                    <input type="text" class="form-control" value="${item.tipo || ''}" readonly />
+                  </div>
+                  <div class="col-md-6 col-lg-4">
+                    <label class="form-label">Descritivo</label>
+                    <input type="text" id="descritivo_${index}" class="form-control" value="${item.descritivo || ''}" placeholder="Ex: Dell Latitude 5420, i5, 16GB RAM" />
+                  </div>
+                  <div class="col-md-6 col-lg-4">
+                    <label class="form-label">Número de Série</label>
+                    <input type="text" id="numero_serie_${index}" class="form-control" value="${item.numero_serie || ''}" placeholder="Ex: 1234567890" />
+                  </div>
+                  <div class="col-md-6 col-lg-4">
+                    <label class="form-label">Centro de Custo</label>
+                    <input type="text" id="centro_custo_${index}" class="form-control" value="${item.centro_custo || ''}" placeholder="Ex: ENG-01, ADM-05" />
+                  </div>
+                  <div class="col-md-6 col-lg-4">
+                    <label class="form-label">Usuário</label>
+                    <input type="text" id="usuario_${index}" class="form-control" value="${item.usuario || ''}" />
+                  </div>
+                  <div class="col-md-6 col-lg-4">
+                    <label class="form-label">Cargo</label>
+                    <input type="text" id="cargo_${index}" class="form-control" value="${item.cargo || ''}" />
+                  </div>
+                  <div class="col-md-6 col-lg-4">
+                    <label class="form-label">Setor</label>
+                    <input type="text" id="setor_${index}" class="form-control" value="${item.setor || ''}" />
+                  </div>
+                  <div class="col-md-6 col-lg-4">
+                    <label class="form-label">Local</label>
+                    <input type="text" id="local_${index}" class="form-control" value="${item.local_atual || ''}" />
+                  </div>
+                  <div class="col-md-6 col-lg-4">
+                    <label class="form-label">Status</label>
+                    <select id="status_${index}" class="form-select">
+                      <option value="Em uso" ${item.status === 'Em uso' ? 'selected' : ''}>Em uso</option>
+                      <option value="Devolvido" ${item.status === 'Devolvido' ? 'selected' : ''}>Devolvido</option>
+                    </select>
+                  </div>
+                  <div class="col-md-6 col-lg-4">
+                    <label class="form-label">TeamViewer ID</label>
+                    <input type="text" id="tv_${index}" class="form-control" value="${item.teamviewer_id || ''}" placeholder="123 456 789" />
+                  </div>
+                  ${isNotebook ? `
+                  <div class="col-md-6 col-lg-4">
+                    <label class="form-label">Nome do Host (PC)</label>
+                    <input type="text" id="host_${index}" class="form-control" value="${item.host || ''}" placeholder="ex: DESKTOP-ABC123" />
+                  </div>
+                  ` : ''}
+                  <div class="col-md-6 col-lg-4">
+                    <label class="form-label">Data Devolução</label>
+                    <input type="date" id="devolucao_${index}" class="form-control" value="${item.data_devolucao || ''}" />
+                  </div>
+                </div>
+                
+                <div class="mt-3 d-flex justify-content-end gap-2">
+                  <button class="btn btn-success btn-sm" onclick="salvarEquipamento(${index}, '${item.patrimonio}')">
+                    <i class="bi bi-check-circle me-1"></i> Salvar Alterações
+                  </button>
+                </div>
+                
+                <div class="mt-2 text-muted small">
+                  Última atualização: ${item.data_recebimento || '—'}
+                </div>
               </div>
             </div>
           </div>
-        `;
-      });
-
-      container.innerHTML = html;
-    }
-
-    function toggleAccordion(index) {
-      const acc = document.getElementById(`acc-${index}`);
-      acc.classList.toggle('open');
-    }
-
-    async function salvarEquipamento(index, patrimonio) {
-      const dados = {
-        numero_serie: document.getElementById(`numero_serie_${index}`).value || null,
-        centro_custo: document.getElementById(`centro_custo_${index}`).value || null,
-        usuario: document.getElementById(`usuario_${index}`).value || null,
-        descritivo: document.getElementById(`descritivo_${index}`).value || null,
-        cargo: document.getElementById(`cargo_${index}`).value || null,
-        setor: document.getElementById(`setor_${index}`).value || null,
-        local_atual: document.getElementById(`local_${index}`).value || null,
-        status: document.getElementById(`status_${index}`).value,
-        teamviewer_id: document.getElementById(`tv_${index}`).value || null,
-        host: document.getElementById(`host_${index}`) 
-              ? document.getElementById(`host_${index}`).value || null 
-              : null,
-        data_devolucao: document.getElementById(`devolucao_${index}`).value || null
-      };
-
-      // Remove campos vazios
-      Object.keys(dados).forEach(k => {
-        if (dados[k] === null || dados[k] === '') delete dados[k];
-      });
-
-      try {
-        const res = await fetch(`${API_URL}/${patrimonio}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(dados)
-        });
-
-        if (res.ok) {
-          showMessage(`✅ ${patrimonio} atualizado com sucesso!`, 'success');
-          setTimeout(hideMessage, 2000);
-        } else {
-          const erro = await res.json();
-          showMessage(`❌ Erro ao salvar ${patrimonio}: ${erro.erro || 'falha desconhecida'}`, 'error');
-        }
-      } catch (err) {
-        showMessage(`Erro de conexão ao salvar ${patrimonio}: ${err.message}`, 'error');
-      }
-    }
-
-    function showMessage(text, type) {
-      const msg = document.getElementById('message');
-      msg.textContent = text;
-      msg.className = type === 'success' ? 'msg-success' : 'msg-error';
-      msg.style.display = 'block';
-    }
-
-    function hideMessage() {
-      document.getElementById('message').style.display = 'none';
-    }
-
-    document.getElementById('search-input').addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') buscarEquipamentos();
+        </div>
+      `;
     });
-  </script>
-</body>
-</html>
+
+    container.innerHTML = html;
+  }
+
+  function toggleAccordion(index) {
+    const collapse = document.getElementById(`collapse-${index}`);
+    const icon = document.querySelector(`#acc-${index} .accordion-icon`);
+    
+    if (collapse.classList.contains('show')) {
+      collapse.classList.remove('show');
+      icon.classList.remove('bi-chevron-up');
+      icon.classList.add('bi-chevron-down');
+    } else {
+      collapse.classList.add('show');
+      icon.classList.remove('bi-chevron-down');
+      icon.classList.add('bi-chevron-up');
+    }
+  }
+
+  async function salvarEquipamento(index, patrimonio) {
+    const dados = {
+      numero_serie: document.getElementById(`numero_serie_${index}`).value || null,
+      centro_custo: document.getElementById(`centro_custo_${index}`).value || null,
+      usuario: document.getElementById(`usuario_${index}`).value || null,
+      descritivo: document.getElementById(`descritivo_${index}`).value || null,
+      cargo: document.getElementById(`cargo_${index}`).value || null,
+      setor: document.getElementById(`setor_${index}`).value || null,
+      local_atual: document.getElementById(`local_${index}`).value || null,
+      status: document.getElementById(`status_${index}`).value,
+      teamviewer_id: document.getElementById(`tv_${index}`).value || null,
+      host: document.getElementById(`host_${index}`) 
+            ? document.getElementById(`host_${index}`).value || null 
+            : null,
+      data_devolucao: document.getElementById(`devolucao_${index}`).value || null
+    };
+
+    // Remove campos vazios
+    Object.keys(dados).forEach(k => {
+      if (dados[k] === null || dados[k] === '') delete dados[k];
+    });
+
+    try {
+      const res = await fetch(`${API_URL}/${patrimonio}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(dados)
+      });
+
+      if (res.ok) {
+        showMessage(`${patrimonio} atualizado com sucesso!`, 'success');
+        setTimeout(hideMessage, 2000);
+      } else {
+        const erro = await res.json();
+        showMessage(`Erro ao salvar ${patrimonio}: ${erro.erro || 'falha desconhecida'}`, 'danger');
+      }
+    } catch (err) {
+      showMessage(`Erro de conexão ao salvar ${patrimonio}: ${err.message}`, 'danger');
+    }
+  }
+
+  function showMessage(text, type) {
+    const msg = document.getElementById('message');
+    const msgText = document.getElementById('message-text');
+    msgText.textContent = text;
+    msg.className = `alert alert-${type} alert-dismissible fade show`;
+    msg.style.display = 'block';
+  }
+
+  function hideMessage() {
+    document.getElementById('message').style.display = 'none';
+  }
+
+  document.getElementById('search-input').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') buscarEquipamentos();
+  });
+</script>
+{% endblock %}

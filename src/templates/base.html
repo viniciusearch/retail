@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{% block title %}Sistema de Equipamentos{% endblock %}</title>
+  
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+   
+  <!-- Ícones -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+  
+  <!-- DataTables CSS -->
+  <link rel="stylesheet" href="https://cdn.datatables.net/2.3.6/css/dataTables.dataTables.min.css">
+  <link rel="stylesheet" href="https://cdn.datatables.net/responsive/3.0.2/css/responsive.dataTables.min.css">
+  <link rel="stylesheet" href="https://cdn.datatables.net/colreorder/2.0.4/css/colReorder.dataTables.min.css">
+  
+  <!-- Seu CSS personalizado -->
+  <style>
+    :root {
+      --dark: #1a1a2e;
+      --darker: #0f3460;
+      --accent: #e94560;
+    }
+    
+    .sidebar {
+      background: var(--dark);
+      min-height: 100vh;
+      width: 250px;
+    }
+    
+    .sidebar .nav-link {
+      color: rgba(255,255,255,0.75);
+      border-radius: 0;
+    }
+    
+    .sidebar .nav-link:hover,
+    .sidebar .nav-link.active {
+      color: white;
+      background: rgba(255,255,255,0.1);
+    }
+    
+    .btn-accent {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+    
+    .btn-accent:hover {
+      background: #d03750;
+      border-color: #d03750;
+    }
+    
+    .card-accent {
+      border-left: 4px solid var(--accent);
+    }
+    
+    /* Modal de cadastro */
+    .modal-label {
+      font-weight: 600;
+      color: #495057;
+    }
+  </style>
+  
+  {% block extra_css %}{% endblock %}
+</head>
+<body class="d-flex bg-light">
+  <!-- Sidebar -->
+  <nav class="sidebar flex-column p-3">
+    <a href="/" class="d-flex align-items-center text-white text-decoration-none mb-4">
+      <i class="bi bi-gear-fill fs-4 me-2"></i>
+      <span class="fs-5"> Equipamentos</span>
+    </a>
+    <ul class="nav nav-pills flex-column">
+      <li class="nav-item mb-1">
+        <a class="nav-link {% if request.endpoint == 'web.home' %}active{% endif %}" href="/">
+          <i class="bi bi-house-door me-2"></i> Início
+        </a>
+      </li>
+      <li class="nav-item mb-1">
+        <a class="nav-link {% if request.endpoint == 'web.atualizar' %}active{% endif %}" href="/atualizar">
+          <i class="bi bi-pencil-square me-2"></i> Atualizar
+        </a>
+      </li>
+      <li class="nav-item mb-1">
+        <a class="nav-link {% if request.endpoint == 'web.gerenciar' %}active{% endif %}" href="/gerenciar">
+          <i class="bi bi-table me-2"></i> Gerenciar
+        </a>
+      </li>
+      <li class="nav-item mb-1">
+        <a class="nav-link" href="/cadastrar">
+          <i class="bi bi-plus-circle me-2"></i> Cadastrar
+        </a>
+      </li>
+    </ul>
+  </nav>
+
+  <!-- Main content -->
+  <main class="flex-grow-1 p-4">
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- Modal de Cadastro Rápido -->
+  <div class="modal fade" id="modalCadastro" tabindex="-1" aria-labelledby="modalCadastroLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="modalCadastroLabel">➕ Cadastrar Novo Equipamento</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+        </div>
+        <div class="modal-body">
+          <form id="form-cadastro-rapido">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label modal-label">Patrimônio <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="cad-patrimonio" required placeholder="Ex: PAT12345">
+              </div>
+              
+              <div class="col-md-6">
+                <label class="form-label modal-label">Tipo <span class="text-danger">*</span></label>
+                <select class="form-select" id="cad-tipo" required>
+                  <option value="">Selecione</option>
+                  <option value="Notebook">Notebook</option>
+                  <option value="Desktop">Desktop</option>
+                  <option value="Monitor">Monitor</option>
+                  <option value="Impressora">Impressora</option>
+                  <option value="Plotter">Plotter</option>
+                  <option value="Tablet">Tablet</option>
+                  <option value="Outro">Outro</option>
+                </select>
+              </div>
+
+              <div class="col-12">
+                <label class="form-label modal-label">Descritivo</label>
+                <input type="text" class="form-control" id="cad-descritivo" placeholder="Ex: Dell Latitude 5420, i5, 16GB RAM">
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label modal-label">Número de Série</label>
+                <input type="text" class="form-control" id="cad-numero_serie" placeholder="Ex: SN123456789">
+              </div>
+              
+              <div class="col-md-6">
+                <label class="form-label modal-label">Local Atual</label>
+                <input type="text" class="form-control" id="cad-local_atual" placeholder="Ex: Canteiro A">
+              </div>
+              
+              <div class="col-md-6">
+                <label class="form-label modal-label">Setor</label>
+                <input type="text" class="form-control" id="cad-setor" placeholder="Ex: Engenharia">
+              </div>
+              
+              <div class="col-md-6">
+                <label class="form-label modal-label">Status</label>
+                <select class="form-select" id="cad-status">
+                  <option value="Em uso">Em uso</option>
+                  <option value="Devolvido">Devolvido</option>
+                </select>
+              </div>
+              
+              <div class="col-md-6">
+                <label class="form-label modal-label">TeamViewer ID</label>
+                <input type="text" class="form-control" id="cad-teamviewer_id" placeholder="123 456 789">
+              </div>
+              
+              <div class="col-md-6" id="cad-host-field" style="display:none;">
+                <label class="form-label modal-label">Nome do Host (PC)</label>
+                <input type="text" class="form-control" id="cad-host" placeholder="ex: DESKTOP-ABC123">
+              </div>
+              
+              <div class="col-12">
+                <label class="form-label modal-label">Observações</label>
+                <textarea class="form-control" id="cad-observacao" rows="2" placeholder="Informações adicionais..."></textarea>
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-primary" id="btn-cadastrar-modal">Cadastrar Equipamento</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- jQuery (obrigatório para DataTables) -->
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  
+  <!-- DataTables JS -->
+  <script src="https://cdn.datatables.net/2.3.6/js/dataTables.min.js"></script>
+  <script src="https://cdn.datatables.net/responsive/3.0.2/js/dataTables.responsive.min.js"></script>
+  <script src="https://cdn.datatables.net/colreorder/2.0.4/js/dataTables.colReorder.min.js"></script>
+  
+  {% block extra_js %}
+  <script>
+    // Mostrar campo host no modal só para notebook
+    document.getElementById('cad-tipo').addEventListener('change', function() {
+      const hostField = document.getElementById('cad-host-field');
+      hostField.style.display = this.value === 'Notebook' ? 'block' : 'none';
+    });
+
+    // Função de cadastro via modal
+    async function cadastrarViaModal() {
+      const dados = {
+        patrimonio: document.getElementById('cad-patrimonio').value.trim(),
+        tipo: document.getElementById('cad-tipo').value,
+        descritivo: document.getElementById('cad-descritivo').value || null,
+        numero_serie: document.getElementById('cad-numero_serie').value || null,
+        local_atual: document.getElementById('cad-local_atual').value || null,
+        setor: document.getElementById('cad-setor').value || null,
+        status: document.getElementById('cad-status').value,
+        teamviewer_id: document.getElementById('cad-teamviewer_id').value || null,
+        host: document.getElementById('cad-host-field').style.display === 'none' ? null : (document.getElementById('cad-host').value || null),
+        observacao: document.getElementById('cad-observacao').value || null
+      };
+
+      if (!dados.patrimonio || !dados.tipo) {
+        alert('Patrimônio e Tipo são obrigatórios.');
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/equipamentos', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(dados)
+        });
+
+        const result = await res.json();
+        if (res.ok) {
+          alert(`✅ ${result.mensagem}! Patrimônio: ${result.patrimonio}`);
+          // Reseta o formulário
+          document.getElementById('form-cadastro-rapido').reset();
+          document.getElementById('cad-host-field').style.display = 'none';
+          // Fecha o modal
+          const modal = bootstrap.Modal.getInstance(document.getElementById('modalCadastro'));
+          modal.hide();
+          // Recarrega a página atual se estiver na página de gerenciamento
+          if (window.location.pathname === '/gerenciar') {
+            window.location.reload();
+          }
+        } else {
+          alert(`❌ ${result.erro || 'Erro ao cadastrar'}`);
+        }
+      } catch (err) {
+        alert('Falha na conexão: ' + err.message);
+      }
+    }
+
+    // Event listener para o botão do modal
+    document.getElementById('btn-cadastrar-modal').addEventListener('click', cadastrarViaModal);
+  </script>
+  {% endblock %}
+</body>
+</html>

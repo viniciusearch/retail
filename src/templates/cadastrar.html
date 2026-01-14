@@ -1,247 +1,164 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Cadastrar Novo Equipamento</title>
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    }
+{% extends "base.html" %}
 
-    body {
-      background: #f5f7fa;
-      padding: 20px;
-      color: #333;
-    }
+{% block title %}Cadastrar Novo Equipamento{% endblock %}
 
-    .container {
-      max-width: 800px;
-      margin: 0 auto;
-    }
+{% block content %}
+<header class="d-flex justify-content-between align-items-center mb-4">
+  <h1 class="h4 mb-0"><i class="bi bi-plus-circle me-2"></i>Cadastrar Novo Equipamento</h1>
+  <a href="/gerenciar" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i> Voltar
+  </a>
+</header>
 
-    header {
-      text-align: center;
-      margin-bottom: 25px;
-    }
-
-    h1 {
-      color: #0d4a82;
-      margin-bottom: 10px;
-    }
-
-    .form-card {
-      background: white;
-      padding: 25px;
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
-
-    .form-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 15px;
-      margin-bottom: 20px;
-    }
-
-    .form-group label {
-      display: block;
-      margin-bottom: 5px;
-      font-weight: 600;
-      color: #444;
-    }
-
-    .form-group input,
-    .form-group select,
-    .form-group textarea {
-      width: 100%;
-      padding: 8px 12px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      font-size: 1rem;
-    }
-
-    .form-group textarea {
-      min-height: 60px;
-      resize: vertical;
-    }
-
-    .btn {
-      background: #0d6efd;
-      color: white;
-      border: none;
-      padding: 10px 20px;
-      border-radius: 4px;
-      cursor: pointer;
-      font-weight: bold;
-      transition: background 0.2s;
-    }
-
-    .btn:hover {
-      background: #0b5ed7;
-    }
-
-    .btn-reset {
-      background: #6c757d;
-    }
-
-    .btn-reset:hover {
-      background: #5a6268;
-    }
-
-    #message {
-      padding: 12px;
-      margin: 20px 0;
-      border-radius: 4px;
-      display: none;
-    }
-
-    .msg-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-    .msg-error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
-
-    .required {
-      color: #dc3545;
-    }
-
-    @media (max-width: 600px) {
-      .form-grid { grid-template-columns: 1fr; }
-    }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <header>
-      <h1>➕ Cadastrar Novo Equipamento</h1>
-      <p>Preencha os dados do ativo. O patrimônio é obrigatório.</p>
-    </header>
-
-    <div class="form-card">
-      <form id="cadastro-form">
-        <div class="form-grid">
-          <!-- Obrigatórios -->
-          <div class="form-group">
-            <label>Patrimônio <span class="required">*</span></label>
-            <input type="text" id="patrimonio" required placeholder="Ex: PAT12345" />
-          </div>
-          <div class="form-group">
-            <label>Tipo <span class="required">*</span></label>
-            <select id="tipo" required>
-              <option value="">Selecione</option>
-              <option value="Notebook">Notebook</option>
-              <option value="Desktop">Desktop</option>
-              <option value="Monitor">Monitor</option>
-              <option value="Impressora">Impressora</option>
-              <option value="Plotter">Plotter</option>
-              <option value="Tablet">Tablet</option>
-              <option value="Outro">Outro</option>
-            </select>
-          </div>
-
-            <div class="form-group">
-                <label>Descritivo</label>
-                <input type="text" id="descritivo" placeholder="Ex: Dell Latitude 5420, i5, 16GB RAM" />
-            </div>
-          <!-- Opcionais -->
-          <div class="form-group">
-            <label>Número de Série</label>
-            <input type="text" id="numero_serie" placeholder="Ex: SN123456789" />
-          </div>
-          <div class="form-group">
-            <label>Local Atual</label>
-            <input type="text" id="local_atual" placeholder="Ex: Canteiro A" />
-          </div>
-          <div class="form-group">
-            <label>Setor</label>
-            <input type="text" id="setor" placeholder="Ex: Engenharia" />
-          </div>
-          <div class="form-group">
-            <label>Status</label>
-            <select id="status">
-              <option value="Em uso">Em uso</option>
-              <option value="Devolvido">Devolvido</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>TeamViewer ID</label>
-            <input type="text" id="teamviewer_id" placeholder="123 456 789" />
-          </div>
-          <div class="form-group" id="host-field" style="display:none;">
-            <label>Nome do Host (PC)</label>
-            <input type="text" id="host" placeholder="ex: DESKTOP-ABC123" />
-          </div>
+<div class="card">
+  <div class="card-body">
+    <p class="text-muted mb-4">Preencha os dados do ativo. O patrimônio é obrigatório.</p>
+    
+    <form id="cadastro-form">
+      <div class="row g-3">
+        <!-- Campos obrigatórios -->
+        <div class="col-md-6">
+          <label class="form-label">Patrimônio <span class="text-danger">*</span></label>
+          <input type="text" class="form-control" id="patrimonio" required placeholder="Ex: PAT12345">
+        </div>
+        
+        <div class="col-md-6">
+          <label class="form-label">Tipo <span class="text-danger">*</span></label>
+          <select class="form-select" id="tipo" required>
+            <option value="">Selecione</option>
+            <option value="Notebook">Notebook</option>
+            <option value="Desktop">Desktop</option>
+            <option value="Monitor">Monitor</option>
+            <option value="Impressora">Impressora</option>
+            <option value="Plotter">Plotter</option>
+            <option value="Tablet">Tablet</option>
+            <option value="Outro">Outro</option>
+          </select>
         </div>
 
-        <div class="form-group">
-          <label>Observações</label>
-          <textarea id="observacao" placeholder="Informações adicionais..."></textarea>
+        <!-- Descritivo -->
+        <div class="col-12">
+          <label class="form-label">Descritivo</label>
+          <input type="text" class="form-control" id="descritivo" placeholder="Ex: Dell Latitude 5420, i5, 16GB RAM">
         </div>
 
-        <div style="display:flex; gap:10px; flex-wrap:wrap;">
-          <button type="submit" class="btn">✅ Cadastrar Equipamento</button>
-          <button type="reset" class="btn btn-reset">↺ Limpar</button>
+        <!-- Campos opcionais -->
+        <div class="col-md-6">
+          <label class="form-label">Número de Série</label>
+          <input type="text" class="form-control" id="numero_serie" placeholder="Ex: SN123456789">
         </div>
-      </form>
-    </div>
-
-    <div id="message"></div>
-  </div>
-
-  <script>
-    // Mostrar campo host só para notebook
-    document.getElementById('tipo').addEventListener('change', function() {
-      const hostField = document.getElementById('host-field');
-      hostField.style.display = this.value === 'Notebook' ? 'block' : 'none';
-    });
-
-    document.getElementById('cadastro-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
+        
+        <div class="col-md-6">
+          <label class="form-label">Local Atual</label>
+          <input type="text" class="form-control" id="local_atual" placeholder="Ex: Canteiro A">
+        </div>
+        
+        <div class="col-md-6">
+          <label class="form-label">Setor</label>
+          <input type="text" class="form-control" id="setor" placeholder="Ex: Engenharia">
+        </div>
+        
+        <div class="col-md-6">
+          <label class="form-label">Status</label>
+          <select class="form-select" id="status">
+            <option value="Em uso">Em uso</option>
+            <option value="Devolvido">Devolvido</option>
+          </select>
+        </div>
+        
+        <div class="col-md-6">
+          <label class="form-label">TeamViewer ID</label>
+          <input type="text" class="form-control" id="teamviewer_id" placeholder="123 456 789">
+        </div>
+        
+        <div class="col-md-6" id="host-field" style="display:none;">
+          <label class="form-label">Nome do Host (PC)</label>
+          <input type="text" class="form-control" id="host" placeholder="ex: DESKTOP-ABC123">
+        </div>
+        
+        <div class="col-12">
+          <label class="form-label">Observações</label>
+          <textarea class="form-control" id="observacao" rows="3" placeholder="Informações adicionais..."></textarea>
+        </div>
+      </div>
       
-      const dados = {
-        patrimonio: document.getElementById('patrimonio').value.trim(),
-        tipo: document.getElementById('tipo').value,
-        numero_serie: document.getElementById('numero_serie').value || null,
-        local_atual: document.getElementById('local_atual').value || null,
-        setor: document.getElementById('setor').value || null,
-        status: document.getElementById('status').value,
-        teamviewer_id: document.getElementById('teamviewer_id').value || null,
-        host: document.getElementById('host').value || null,
-        observacao: document.getElementById('observacao').value || null
-      };
+      <div class="mt-4 d-flex gap-2 flex-wrap">
+        <button type="submit" class="btn btn-primary">
+          <i class="bi bi-check-circle me-1"></i> Cadastrar Equipamento
+        </button>
+        <button type="reset" class="btn btn-outline-secondary">
+          <i class="bi bi-arrow-clockwise me-1"></i> Limpar
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
 
-      if (!dados.patrimonio || !dados.tipo) {
-        showMessage('Patrimônio e Tipo são obrigatórios.', 'error');
-        return;
-      }
+<div id="message" class="alert alert-dismissible fade show mt-3" role="alert" style="display:none;">
+  <span id="message-text"></span>
+  <button type="button" class="btn-close" onclick="hideMessage()"></button>
+</div>
+{% endblock %}
 
-      try {
-        const res = await fetch('/api/equipamentos', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(dados)
-        });
+{% block extra_js %}
+<script>
+  // Mostrar campo host só para notebook
+  document.getElementById('tipo').addEventListener('change', function() {
+    const hostField = document.getElementById('host-field');
+    hostField.style.display = this.value === 'Notebook' ? 'block' : 'none';
+  });
 
-        const result = await res.json();
-        if (res.ok) {
-          showMessage(`✅ ${result.mensagem}! Patrimônio: ${result.patrimonio}`, 'success');
-          document.getElementById('cadastro-form').reset();
-          document.getElementById('host-field').style.display = 'none';
-        } else {
-          showMessage(`❌ ${result.erro || 'Erro ao cadastrar'}`, 'error');
-        }
-      } catch (err) {
-        showMessage('Falha na conexão: ' + err.message, 'error');
-      }
-    });
+  document.getElementById('cadastro-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const dados = {
+      patrimonio: document.getElementById('patrimonio').value.trim(),
+      tipo: document.getElementById('tipo').value,
+      descritivo: document.getElementById('descritivo').value || null,
+      numero_serie: document.getElementById('numero_serie').value || null,
+      local_atual: document.getElementById('local_atual').value || null,
+      setor: document.getElementById('setor').value || null,
+      status: document.getElementById('status').value,
+      teamviewer_id: document.getElementById('teamviewer_id').value || null,
+      host: document.getElementById('host').value || null,
+      observacao: document.getElementById('observacao').value || null
+    };
 
-    function showMessage(text, type) {
-      const msg = document.getElementById('message');
-      msg.textContent = text;
-      msg.className = type === 'success' ? 'msg-success' : 'msg-error';
-      msg.style.display = 'block';
+    if (!dados.patrimonio || !dados.tipo) {
+      showMessage('Patrimônio e Tipo são obrigatórios.', 'danger');
+      return;
     }
-  </script>
-</body>
-</html>
+
+    try {
+      const res = await fetch('/api/equipamentos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(dados)
+      });
+
+      const result = await res.json();
+      if (res.ok) {
+        showMessage(`✅ ${result.mensagem}! Patrimônio: ${result.patrimonio}`, 'success');
+        document.getElementById('cadastro-form').reset();
+        document.getElementById('host-field').style.display = 'none';
+      } else {
+        showMessage(`❌ ${result.erro || 'Erro ao cadastrar'}`, 'danger');
+      }
+    } catch (err) {
+      showMessage('Falha na conexão: ' + err.message, 'danger');
+    }
+  });
+
+  function showMessage(text, type) {
+    const msg = document.getElementById('message');
+    const msgText = document.getElementById('message-text');
+    msgText.textContent = text;
+    msg.className = `alert alert-${type} alert-dismissible fade show`;
+    msg.style.display = 'block';
+  }
+
+  function hideMessage() {
+    document.getElementById('message').style.display = 'none';
+  }
+</script>
+{% endblock %}
