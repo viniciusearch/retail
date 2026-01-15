@@ -5,7 +5,7 @@ web_bp = Blueprint('web', __name__, template_folder='templates', static_folder='
 
 @web_bp.route('/')
 def home():
-    return render_template('home.html')
+    return render_template('index.html')
 
 @web_bp.route('/home')
 def dashboard():
