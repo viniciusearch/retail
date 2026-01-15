@@ -98,12 +98,12 @@
 
     try {
       let dados = [];
-      const resPat = await fetch(`${API_URL}?patrimonio=${encodeURIComponent(termo)}`);
+      const resPat = await fetch(`${API_URL + '/pesquisa'}?patrimonio=${encodeURIComponent(termo)}`);
       const dataPat = await resPat.json();
       if (dataPat.length > 0) {
         dados = dataPat;
       } else {
-        const resUser = await fetch(`${API_URL}?usuario=${encodeURIComponent(termo)}`);
+        const resUser = await fetch(`${API_URL + '/pesquisa'}?usuario=${encodeURIComponent(termo)}`);
         dados = await resUser.json();
       }
 
@@ -122,10 +122,11 @@
   }
 
   function renderizarAcordeao(equipamentos) {
+    console.log(equipamentos.resultados)
     const container = document.getElementById('results-container');
     let html = `<h5 class="mb-3">Encontrado(s) ${equipamentos.length} equipamento(s):</h5>`;
 
-    equipamentos.forEach((item, index) => {
+    equipamentos.resultados.forEach((item, index) => {
       const isNotebook = item.tipo === 'Notebook';
       const statusClass = item.status === 'Em uso' ? 'success' : 'warning';
 
