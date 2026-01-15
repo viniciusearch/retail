@@ -1,10 +1,14 @@
 # src/web.py
 from flask import Blueprint, render_template, request, redirect, url_for
 
-web_bp = Blueprint('web', __name__, template_folder='templates')
+web_bp = Blueprint('web', __name__, template_folder='templates', static_folder='static')
 
 @web_bp.route('/')
 def home():
+    return render_template('home.html')
+
+@web_bp.route('/home')
+def dashboard():
     return render_template('index.html')
 
 @web_bp.route('/atualizar')
@@ -33,3 +37,7 @@ def gerenciar():
 @web_bp.route('/cadastrar')
 def cadastrar():
     return render_template('cadastrar.html')
+
+@web_bp.route('/lote')
+def lote():
+    return render_template('lote.html')

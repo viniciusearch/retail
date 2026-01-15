@@ -1,0 +1,258 @@
+{% extends "base.html" %}
+
+{% block title %}Upload em Lote - Equipamentos{% endblock %}
+
+{% block content %}
+<header class="d-flex justify-content-between align-items-center mb-4">
+  <h1 class="h4"><i class="bi bi-file-earmark-arrow-up me-2"></i>Upload em Lote</h1>
+  <a href="/gerenciar" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i> Voltar
+  </a>
+</header>
+
+<div class="row">
+  <div class="col-lg-6">
+    <div class="card mb-4">
+      <div class="card-header">
+        <h5 class="mb-0">📤 Configuração do Upload</h5>
+      </div>
+      <div class="card-body">
+        <div class="mb-3">
+          <label class="form-label fw-bold">Selecione a ação:</label>
+          <div class="form-check">
+            <input class="form-check-input" type="radio" name="acao" id="acao-create" value="create" checked>
+            <label class="form-check-label" for="acao-create">
+              <i class="bi bi-plus-circle text-success me-1"></i> Cadastrar novos equipamentos
+            </label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="radio" name="acao" id="acao-update" value="update">
+            <label class="form-check-label" for="acao-update">
+              <i class="bi bi-pencil-square text-warning me-1"></i> Atualizar equipamentos existentes
+            </label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="radio" name="acao" id="acao-delete" value="delete">
+            <label class="form-check-label" for="acao-delete">
+              <i class="bi bi-trash text-danger me-1"></i> Excluir equipamentos permanentemente
+            </label>
+          </div>
+        </div>
+        
+        <div class="mb-3">
+          <label class="form-label">Arquivo CSV</label>
+          <input type="file" class="form-control" id="csv-file" accept=".csv" required>
+          <div class="form-text">
+            <a href="#" id="download-template" class="text-decoration-none">Baixar template de exemplo</a>
+          </div>
+        </div>
+        
+        <div id="preview-container" style="display:none;" class="mt-3 p-3 bg-light rounded">
+          <h6 class="mb-2">🔍 Pré-visualização:</h6>
+          <div id="preview-content" style="max-height: 200px; overflow-y: auto; font-size: 0.85rem;"></div>
+          <div class="mt-2">
+            <button class="btn btn-primary btn-sm" id="confirm-upload">
+              <i class="bi bi-check-circle me-1"></i> Confirmar e Processar
+            </button>
+            <button class="btn btn-outline-secondary btn-sm ms-2" onclick="cancelPreview()">
+              <i class="bi bi-x-circle me-1"></i> Cancelar
+            </button>
+          </div>
+        </div>
+        
+        <button type="button" class="btn btn-outline-primary w-100" id="preview-btn">
+          <i class="bi bi-eye me-1"></i> Pré-visualizar Ações
+        </button>
+      </div>
+    </div>
+    
+    <div id="result-container" style="display:none;">
+      <div class="card">
+        <div class="card-body">
+          <div id="result-summary" class="alert"></div>
+          <div id="result-details" style="max-height: 300px; overflow-y: auto; font-family: monospace; font-size: 0.85rem;"></div>
+          <button class="btn btn-outline-secondary mt-3" onclick="location.reload()">
+            <i class="bi bi-arrow-clockwise me-1"></i> Novo Upload
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-lg-6">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="mb-0">📄 Instruções por Ação</h5>
+      </div>
+      <div class="card-body">
+        <div id="instrucoes-create" class="instruction-content">
+          <h6><i class="bi bi-plus-circle text-success me-1"></i> Cadastrar</h6>
+          <p>• Coluna obrigatória: <code>patrimonio</code>, <code>tipo</code><br>
+             • Demais colunas opcionais<br>
+             • Status padrão: "Em uso"</p>
+        </div>
+        <div id="instrucoes-update" class="instruction-content" style="display:none;">
+          <h6><i class="bi bi-pencil-square text-warning me-1"></i> Atualizar</h6>
+          <p>• Coluna obrigatória: <code>patrimonio</code><br>
+             • Preencha apenas os campos que deseja atualizar<br>
+             • Campos vazios serão ignorados</p>
+        </div>
+        <div id="instrucoes-delete" class="instruction-content" style="display:none;">
+          <h6><i class="bi bi-trash text-danger me-1"></i> Excluir</h6>
+          <p>• Apenas a coluna <code>patrimonio</code> é necessária<br>
+             • <strong class="text-danger">Essa ação é PERMANENTE!</strong><br>
+             • Equipamentos inexistentes gerarão erro</p>
+        </div>
+        
+        <div class="mt-3">
+          <h6>📋 Estrutura Básica:</h6>
+          <pre class="bg-white p-2 border rounded" style="font-size: 0.8rem;">patrimonio,tipo,status
+PAT001,Notebook,Em uso
+PAT002,Monitor,Devolvido</pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Alterna instruções conforme a ação selecionada
+document.querySelectorAll('input[name="acao"]').forEach(radio => {
+  radio.addEventListener('change', function() {
+    document.querySelectorAll('.instruction-content').forEach(div => div.style.display = 'none');
+    const selected = document.querySelector(`#instrucoes-${this.value}`);
+    if (selected) selected.style.display = 'block';
+  });
+});
+
+// Download do template
+document.getElementById('download-template').addEventListener('click', function(e) {
+  e.preventDefault();
+  
+  const acao = document.querySelector('input[name="acao"]:checked').value;
+  let template = '';
+  
+  if (acao === 'create') {
+    template = `patrimonio,tipo,descritivo,numero_serie,centro_custo,local_atual,setor,usuario,cargo,status
+PAT001,Notebook,"Dell Latitude 5420",SN123456,ENG-01,Canteiro,Engenharia,Vinicius,Técnico,Em uso
+PAT002,Monitor,"Dell 24\"",SN789012,ADM-05,Escritório,Administração,,,"Devolvido`;
+  } else if (acao === 'update') {
+    template = `patrimonio,status,teamviewer_id,host
+PAT001,Devolvido,123456,DESKTOP-ABC
+PAT002,Em uso,,`;
+  } else { // delete
+    template = `patrimonio
+PAT001
+PAT002`;
+  }
+  
+  const blob = new Blob([template], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `template_${acao}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+});
+
+// Pré-visualização
+document.getElementById('preview-btn').addEventListener('click', async () => {
+  const fileInput = document.getElementById('csv-file');
+  const file = fileInput.files[0];
+  const acao = document.querySelector('input[name="acao"]:checked').value;
+  
+  if (!file) {
+    alert('Selecione um arquivo CSV');
+    return;
+  }
+  
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('acao', acao);
+  
+  try {
+    // Lê o arquivo localmente para pré-visualização
+    const text = await file.text();
+    const lines = text.split('\n');
+    const previewLines = lines.slice(0, 6); // Primeiras 5 linhas + cabeçalho
+    
+    let previewHtml = `<strong>Ação selecionada:</strong> ${acao}<br><br>`;
+    previewHtml += '<strong>Pré-visualização dos dados:</strong><br>';
+    previewHtml += '<code>' + previewLines.join('<br>') + '</code>';
+    
+    if (lines.length > 6) {
+      previewHtml += `<br><em>... e mais ${lines.length - 6} linhas</em>`;
+    }
+    
+    document.getElementById('preview-content').innerHTML = previewHtml;
+    document.getElementById('preview-container').style.display = 'block';
+    
+  } catch (err) {
+    alert('Erro ao ler arquivo: ' + err.message);
+  }
+});
+
+// Cancelar pré-visualização
+function cancelPreview() {
+  document.getElementById('preview-container').style.display = 'none';
+}
+
+// Confirmar e processar
+document.getElementById('confirm-upload').addEventListener('click', async () => {
+  const fileInput = document.getElementById('csv-file');
+  const file = fileInput.files[0];
+  const acao = document.querySelector('input[name="acao"]:checked').value;
+  
+  if (!file) return;
+  
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('acao', acao);
+  
+  // Confirmação adicional para exclusão
+  if (acao === 'delete') {
+    if (!confirm('⚠️ ATENÇÃO!\nEsta ação EXCLUIRÁ permanentemente os equipamentos listados.\nTem certeza que deseja continuar?')) {
+      return;
+    }
+  }
+  
+  try {
+    const response = await fetch('/api/equipamentos/lote', {
+      method: 'POST',
+      body: formData
+    });
+    
+    const result = await response.json();
+    const summaryDiv = document.getElementById('result-summary');
+    const detailsDiv = document.getElementById('result-details');
+    
+    if (response.ok) {
+      summaryDiv.className = 'alert alert-success';
+      summaryDiv.innerHTML = `<strong>Sucesso!</strong> ${result.mensagem}`;
+      
+      let detailsHtml = result.resultados.detalhes.map(d => `<span class="text-success">✓ ${d}</span>`).join('<br>');
+      if (result.resultados.erros.length > 0) {
+        detailsHtml += '<br><br><strong>Erros:</strong><br>';
+        detailsHtml += result.resultados.erros.map(e => `<span class="text-danger">✗ ${e}</span>`).join('<br>');
+      }
+      detailsDiv.innerHTML = detailsHtml;
+      
+    } else {
+      summaryDiv.className = 'alert alert-danger';
+      summaryDiv.innerHTML = `<strong>Erro!</strong> ${result.erro || 'Falha no processamento'}`;
+      detailsDiv.innerHTML = '';
+    }
+    
+    document.getElementById('preview-container').style.display = 'none';
+    document.getElementById('result-container').style.display = 'block';
+    
+  } catch (err) {
+    alert('Erro na requisição: ' + err.message);
+  }
+});
+</script>
+{% endblock %}
