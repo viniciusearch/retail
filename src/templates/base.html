@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>{% block title %}Sistema de Equipamentos{% endblock %}</title>
+  <title>{% block title %}Sistema de Gestão de Ativos{% endblock %}</title>
   
   <!-- Bootstrap 5 CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -15,6 +15,9 @@
   <link rel="stylesheet" href="https://cdn.datatables.net/2.3.6/css/dataTables.dataTables.min.css">
   <link rel="stylesheet" href="https://cdn.datatables.net/responsive/3.0.2/css/responsive.dataTables.min.css">
   <link rel="stylesheet" href="https://cdn.datatables.net/colreorder/2.0.4/css/colReorder.dataTables.min.css">
+  
+  <!-- Chart.js para dashboard -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   
   <!-- Seu CSS personalizado -->
   <style>
@@ -60,41 +63,77 @@
       font-weight: 600;
       color: #495057;
     }
+    
+    /* Footer */
+    footer {
+      font-size: 0.85rem;
+    }
+    
+    footer a {
+      color: var(--darker);
+      transition: color 0.2s;
+    }
+    
+    footer a:hover {
+      color: var(--accent);
+      text-decoration: underline;
+    }
   </style>
   
   {% block extra_css %}{% endblock %}
 </head>
-<body class="d-flex bg-light">
+<body>
+  <div class="d-flex min-vh-100 bg-light">
   <!-- Sidebar -->
   <nav class="sidebar flex-column p-3">
-    <a href="/home" class="d-flex align-items-center text-white text-decoration-none mb-4">
+    <a href="/dashboard" class="d-flex align-items-center text-white text-decoration-none mb-4">
       <i class="bi bi-gear-fill fs-4 me-2"></i>
-      <span class="fs-5"> Equipamentos</span>
+      <span class="fs-5"> Gestão de Ativos</span>
     </a>
     <ul class="nav nav-pills flex-column">
       <li class="nav-item mb-1">
-        <a class="nav-link {% if request.endpoint == 'web.home' %}active{% endif %}" href="/home">
-          <i class="bi bi-house-door me-2"></i> Início
+        <a class="nav-link {% if request.endpoint == 'web.dashboard' %}active{% endif %}" href="/dashboard">
+          <i class="bi bi-speedometer2 me-2"></i> Dashboard
         </a>
       </li>
       <li class="nav-item mb-1">
-        <a class="nav-link {% if request.endpoint == 'web.atualizar' %}active{% endif %}" href="/atualizar">
-          <i class="bi bi-pencil-square me-2"></i> Atualizar
+        <a class="nav-link {% if request.endpoint == 'web.gerenciar_ativos' %}active{% endif %}" href="/ativos">
+          <i class="bi bi-table me-2"></i> Gerenciar Ativos
         </a>
       </li>
       <li class="nav-item mb-1">
-        <a class="nav-link {% if request.endpoint == 'web.gerenciar' %}active{% endif %}" href="/gerenciar">
-          <i class="bi bi-table me-2"></i> Gerenciar
+        <a class="nav-link {% if request.endpoint == 'web.cadastrar_ativo' %}active{% endif %}" href="/ativos/cadastrar">
+          <i class="bi bi-plus-circle me-2"></i> Cadastrar Ativo
         </a>
       </li>
       <li class="nav-item mb-1">
-        <a class="nav-link" href="/cadastrar">
-          <i class="bi bi-plus-circle me-2"></i> Cadastrar
+        <a class="nav-link {% if request.endpoint == 'web.upload_lote' %}active{% endif %}" href="/ativos/lote">
+          <i class="bi bi-file-earmark-arrow-up me-2"></i> Upload em Lote
         </a>
       </li>
-            <li class="nav-item mb-1">
-        <a class="nav-link" href="/lote">
-          <i class="bi bi-plus-circle me-2"></i> Lote
+      <li class="nav-item mb-1">
+        <a class="nav-link {% if request.endpoint == 'web.gerenciar_contratos' %}active{% endif %}" href="/contratos">
+          <i class="bi bi-file-contract me-2"></i> Contratos
+        </a>
+      </li>
+      <li class="nav-item mb-1">
+        <a class="nav-link {% if request.endpoint == 'web.gerenciar_solicitacoes' %}active{% endif %}" href="/solicitacoes">
+          <i class="bi bi-clipboard-check me-2"></i> Solicitações
+        </a>
+      </li>
+      <li class="nav-item mb-1">
+        <a class="nav-link {% if request.endpoint == 'web.gerenciar_usuarios' %}active{% endif %}" href="/usuarios">
+          <i class="bi bi-people me-2"></i> Usuários
+        </a>
+      </li>
+      <li class="nav-item mb-1">
+        <a class="nav-link {% if request.endpoint == 'web.relatorios' %}active{% endif %}" href="/relatorios">
+          <i class="bi bi-file-earmark-bar-graph me-2"></i> Relatórios
+        </a>
+      </li>
+      <li class="nav-item mb-1">
+        <a class="nav-link {% if request.endpoint == 'web.configuracoes' %}active{% endif %}" href="/configuracoes">
+          <i class="bi bi-gear me-2"></i> Configurações
         </a>
       </li>
     </ul>
@@ -102,57 +141,97 @@
 
   <!-- Main content -->
   <main class="flex-grow-1 p-4">
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        {% for message in messages %}
+          <div class="alert alert-info alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+    
     {% block content %}{% endblock %}
   </main>
+  </div>
+
+  <!-- Footer -->
+  <footer class="bg-light border-top mt-auto">
+    <div class="container py-3">
+      <div class="row align-items-center">
+        <div class="col-md-6 text-center text-md-start mb-2 mb-md-0">
+          <small class="text-muted">
+            &copy;  Vinicius. Todos os direitos reservados.
+          </small>
+        </div>
+        <div class="col-md-6 text-center text-md-end">
+          <small class="text-muted">
+            Desenvolvido por <strong>Vinicius</strong> • 
+            <a href="mailto:seu.email@dominio.com" class="text-decoration-none">
+              seu.email@dominio.com
+            </a> • 
+            <a href="https://linkedin.com/in/seu-perfil" target="_blank" class="text-decoration-none">
+              LinkedIn
+            </a>
+          </small>
+          <br>
+          <small class="text-muted">
+            Versão 1.0 • Disponibilizado como brinde à <strong>[Nome do Cliente]</strong>, 
+            cujo desafio inspirou este projeto.
+          </small>
+        </div>
+      </div>
+    </div>
+  </footer>
 
   <!-- Modal de Cadastro Rápido -->
   <div class="modal fade" id="modalCadastro" tabindex="-1" aria-labelledby="modalCadastroLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title" id="modalCadastroLabel">➕ Cadastrar Novo Equipamento</h5>
+          <h5 class="modal-title" id="modalCadastroLabel">➕ Cadastrar Novo Ativo</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
         </div>
         <div class="modal-body">
           <form id="form-cadastro-rapido">
             <div class="row g-3">
               <div class="col-md-6">
-                <label class="form-label modal-label">Patrimônio <span class="text-danger">*</span></label>
-                <input type="text" class="form-control" id="cad-patrimonio" required placeholder="Ex: PAT12345">
+                <label class="form-label modal-label">Código do Ativo <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="cad-codigo_ativo" required placeholder="Ex: NB-PAT12345">
               </div>
               
               <div class="col-md-6">
-                <label class="form-label modal-label">Tipo <span class="text-danger">*</span></label>
-                <select class="form-select" id="cad-tipo" required>
+                <label class="form-label modal-label">Tipo de Ativo <span class="text-danger">*</span></label>
+                <select class="form-select" id="cad-tipo_ativo" required>
                   <option value="">Selecione</option>
-                  <option value="Notebook">Notebook</option>
-                  <option value="Desktop">Desktop</option>
-                  <option value="Monitor">Monitor</option>
-                  <option value="Impressora">Impressora</option>
-                  <option value="Plotter">Plotter</option>
-                  <option value="Tablet">Tablet</option>
-                  <option value="Outro">Outro</option>
+                  <option value="hardware">Hardware</option>
+                  <option value="periferico">Periférico</option>
+                  <option value="rede">Rede</option>
+                  <option value="software">Software</option>
+                  <option value="mobiliario">Mobiliário</option>
+                  <option value="servico">Serviço</option>
+                </select>
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label modal-label">Categoria <span class="text-danger">*</span></label>
+                <select class="form-select" id="cad-categoria" required>
+                  <option value="">Selecione o tipo primeiro</option>
                 </select>
               </div>
 
               <div class="col-12">
-                <label class="form-label modal-label">Descritivo</label>
-                <input type="text" class="form-control" id="cad-descritivo" placeholder="Ex: Dell Latitude 5420, i5, 16GB RAM">
+                <label class="form-label modal-label">Descrição</label>
+                <input type="text" class="form-control" id="cad-descricao" placeholder="Ex: Dell Latitude 5420, i5, 16GB RAM">
               </div>
 
               <div class="col-md-6">
-                <label class="form-label modal-label">Número de Série</label>
-                <input type="text" class="form-control" id="cad-numero_serie" placeholder="Ex: SN123456789">
-              </div>
-              
-              <div class="col-md-6">
-                <label class="form-label modal-label">Local Atual</label>
-                <input type="text" class="form-control" id="cad-local_atual" placeholder="Ex: Canteiro A">
-              </div>
-              
-              <div class="col-md-6">
-                <label class="form-label modal-label">Setor</label>
-                <input type="text" class="form-control" id="cad-setor" placeholder="Ex: Engenharia">
+                <label class="form-label modal-label">Proprietário</label>
+                <select class="form-select" id="cad-proprietario_id">
+                  <option value="">Selecione</option>
+                  <!-- Será preenchido dinamicamente -->
+                </select>
               </div>
               
               <div class="col-md-6">
@@ -160,29 +239,41 @@
                 <select class="form-select" id="cad-status">
                   <option value="Em uso">Em uso</option>
                   <option value="Devolvido">Devolvido</option>
+                  <option value="Desmobilizado">Desmobilizado</option>
                 </select>
               </div>
               
               <div class="col-md-6">
-                <label class="form-label modal-label">TeamViewer ID</label>
-                <input type="text" class="form-control" id="cad-teamviewer_id" placeholder="123 456 789">
+                <label class="form-label modal-label">Usuário Atual</label>
+                <select class="form-select" id="cad-usuario_atual_id">
+                  <option value="">Disponível</option>
+                  <!-- Será preenchido dinamicamente -->
+                </select>
               </div>
               
-              <div class="col-md-6" id="cad-host-field" style="display:none;">
-                <label class="form-label modal-label">Nome do Host (PC)</label>
-                <input type="text" class="form-control" id="cad-host" placeholder="ex: DESKTOP-ABC123">
+              <div class="col-md-6">
+                <label class="form-label modal-label">Local Atual</label>
+                <select class="form-select" id="cad-local_atual_id">
+                  <option value="">Selecione</option>
+                  <!-- Será preenchido dinamicamente -->
+                </select>
+              </div>
+              
+              <div class="col-12">
+                <label class="form-label modal-label">Projeto</label>
+                <input type="text" class="form-control" id="cad-projeto" placeholder="Ex: SCALA DATACENTER TB09">
               </div>
               
               <div class="col-12">
                 <label class="form-label modal-label">Observações</label>
-                <textarea class="form-control" id="cad-observacao" rows="2" placeholder="Informações adicionais..."></textarea>
+                <textarea class="form-control" id="cad-observacoes" rows="2" placeholder="Informações adicionais..."></textarea>
               </div>
             </div>
           </form>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-          <button type="button" class="btn btn-primary" id="btn-cadastrar-modal">Cadastrar Equipamento</button>
+          <button type="button" class="btn btn-primary" id="btn-cadastrar-modal">Cadastrar Ativo</button>
         </div>
       </div>
     </div>
@@ -199,65 +290,41 @@
   <script src="https://cdn.datatables.net/responsive/3.0.2/js/dataTables.responsive.min.js"></script>
   <script src="https://cdn.datatables.net/colreorder/2.0.4/js/dataTables.colReorder.min.js"></script>
   
-  {% block extra_js %}
+  <!-- Script para ano atual no footer -->
   <script>
-    // Mostrar campo host no modal só para notebook
-    document.getElementById('cad-tipo').addEventListener('change', function() {
-      const hostField = document.getElementById('cad-host-field');
-      hostField.style.display = this.value === 'Notebook' ? 'block' : 'none';
-    });
-
-    // Função de cadastro via modal
-    async function cadastrarViaModal() {
-      const dados = {
-        patrimonio: document.getElementById('cad-patrimonio').value.trim(),
-        tipo: document.getElementById('cad-tipo').value,
-        descritivo: document.getElementById('cad-descritivo').value || null,
-        numero_serie: document.getElementById('cad-numero_serie').value || null,
-        local_atual: document.getElementById('cad-local_atual').value || null,
-        setor: document.getElementById('cad-setor').value || null,
-        status: document.getElementById('cad-status').value,
-        teamviewer_id: document.getElementById('cad-teamviewer_id').value || null,
-        host: document.getElementById('cad-host-field').style.display === 'none' ? null : (document.getElementById('cad-host').value || null),
-        observacao: document.getElementById('cad-observacao').value || null
-      };
-
-      if (!dados.patrimonio || !dados.tipo) {
-        alert('Patrimônio e Tipo são obrigatórios.');
-        return;
-      }
-
-      try {
-        const res = await fetch('/api/equipamentos', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(dados)
+    // Torna o ano atual disponível no template
+    const now = new Date();
+    window.now = { year: now.getFullYear() };
+    
+    // Mapeamento de categorias por tipo de ativo
+    const categoriasPorTipo = {
+      'hardware': ['Notebook', 'Desktop', 'Tablet', 'Smartphone', 'Servidor'],
+      'periferico': ['Monitor', 'Teclado', 'Mouse', 'Webcam', 'Headset', 'Impressora', 'Plotter'],
+      'rede': ['Roteador', 'Switch', 'Access Point', 'Antena Wi-Fi'],
+      'software': ['AutoCAD', 'Office', 'Windows', 'Adobe', 'Outro Software'],
+      'mobiliario': ['Cadeira', 'Mesa', 'Arquivo', 'Organizador', 'Armário'],
+      'servico': ['Locação', 'Manutenção', 'Suporte']
+    };
+    
+    // Atualiza categorias quando tipo muda
+    document.getElementById('cad-tipo_ativo').addEventListener('change', function() {
+      const categoriaSelect = document.getElementById('cad-categoria');
+      const tipo = this.value;
+      
+      // Limpa opções anteriores
+      categoriaSelect.innerHTML = '<option value="">Selecione</option>';
+      
+      if (tipo && categoriasPorTipo[tipo]) {
+        categoriasPorTipo[tipo].forEach(categoria => {
+          const option = document.createElement('option');
+          option.value = categoria;
+          option.textContent = categoria;
+          categoriaSelect.appendChild(option);
         });
-
-        const result = await res.json();
-        if (res.ok) {
-          alert(`✅ ${result.mensagem}! Patrimônio: ${result.patrimonio}`);
-          // Reseta o formulário
-          document.getElementById('form-cadastro-rapido').reset();
-          document.getElementById('cad-host-field').style.display = 'none';
-          // Fecha o modal
-          const modal = bootstrap.Modal.getInstance(document.getElementById('modalCadastro'));
-          modal.hide();
-          // Recarrega a página atual se estiver na página de gerenciamento
-          if (window.location.pathname === '/gerenciar') {
-            window.location.reload();
-          }
-        } else {
-          alert(`❌ ${result.erro || 'Erro ao cadastrar'}`);
-        }
-      } catch (err) {
-        alert('Falha na conexão: ' + err.message);
       }
-    }
-
-    // Event listener para o botão do modal
-    document.getElementById('btn-cadastrar-modal').addEventListener('click', cadastrarViaModal);
+    });
   </script>
-  {% endblock %}
+  
+  {% block extra_js %}{% endblock %}
 </body>
 </html>

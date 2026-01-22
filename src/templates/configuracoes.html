@@ -1,0 +1,493 @@
+{% extends "base.html" %}
+
+{% block title %}Configurações - Gestão de Ativos{% endblock %}
+
+{% block extra_css %}
+<style>
+  .config-card {
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    transition: box-shadow 0.2s ease;
+  }
+  
+  .config-card:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  }
+  
+  .item-lista {
+    padding: 8px 12px;
+    border-bottom: 1px solid #e9ecef;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .item-lista:last-child {
+    border-bottom: none;
+  }
+  
+  .btn-acao {
+    padding: 4px 8px;
+    font-size: 0.8rem;
+  }
+  
+  .empty-state {
+    text-align: center;
+    padding: 20px;
+    color: #6c757d;
+  }
+  
+  .empty-state i {
+    font-size: 2rem;
+    margin-bottom: 10px;
+    color: #dee2e6;
+  }
+  
+  .modal-form {
+    min-width: 350px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<header class="d-flex justify-content-between align-items-center mb-4">
+  <h2 class="mb-0"><i class="bi bi-gear me-2"></i>Configurações do Sistema</h2>
+  <div class="d-flex gap-2">
+    <button class="btn btn-outline-primary btn-sm" onclick="location.reload()">
+      <i class="bi bi-arrow-clockwise me-1"></i> Atualizar
+    </button>
+  </div>
+</header>
+
+<div class="alert alert-info">
+  <i class="bi bi-info-circle me-2"></i>
+  Configure as listas básicas do sistema antes de cadastrar ativos. 
+  Estas listas serão usadas em todos os formulários de cadastro.
+</div>
+
+<!-- Cards de Configuração -->
+<div class="row g-4">
+  <!-- Cargos -->
+  <div class="col-12 col-md-6 col-lg-4">
+    <div class="card config-card">
+      <div class="card-header bg-light">
+        <h5 class="mb-0"><i class="bi bi-person-badge me-2"></i>Cargos</h5>
+      </div>
+      <div class="card-body p-0">
+        <div id="lista-cargos" class="p-2">
+          <div class="text-center py-3 text-muted">
+            <div class="spinner-border spinner-border-sm" role="status">
+              <span class="visually-hidden">Carregando...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card-footer text-end">
+        <button class="btn btn-sm btn-primary" onclick="abrirModal('cargo')">
+          <i class="bi bi-plus-circle me-1"></i> Adicionar Cargo
+        </button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Setores -->
+  <div class="col-12 col-md-6 col-lg-4">
+    <div class="card config-card">
+      <div class="card-header bg-light">
+        <h5 class="mb-0"><i class="bi bi-building me-2"></i>Setores</h5>
+      </div>
+      <div class="card-body p-0">
+        <div id="lista-setores" class="p-2">
+          <div class="text-center py-3 text-muted">
+            <div class="spinner-border spinner-border-sm" role="status">
+              <span class="visually-hidden">Carregando...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card-footer text-end">
+        <button class="btn btn-sm btn-primary" onclick="abrirModal('setor')">
+          <i class="bi bi-plus-circle me-1"></i> Adicionar Setor
+        </button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Locais -->
+  <div class="col-12 col-md-6 col-lg-4">
+    <div class="card config-card">
+      <div class="card-header bg-light">
+        <h5 class="mb-0"><i class="bi bi-geo-alt me-2"></i>Locais Físicos</h5>
+      </div>
+      <div class="card-body p-0">
+        <div id="lista-locais" class="p-2">
+          <div class="text-center py-3 text-muted">
+            <div class="spinner-border spinner-border-sm" role="status">
+              <span class="visually-hidden">Carregando...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card-footer text-end">
+        <button class="btn btn-sm btn-primary" onclick="abrirModal('local')">
+          <i class="bi bi-plus-circle me-1"></i> Adicionar Local
+        </button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Empresas -->
+  <div class="col-12 col-md-6 col-lg-4">
+    <div class="card config-card">
+      <div class="card-header bg-light">
+        <h5 class="mb-0"><i class="bi bi-building me-2"></i>Empresas</h5>
+      </div>
+      <div class="card-body p-0">
+        <div id="lista-empresas" class="p-2">
+          <div class="text-center py-3 text-muted">
+            <div class="spinner-border spinner-border-sm" role="status">
+              <span class="visually-hidden">Carregando...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card-footer text-end">
+        <button class="btn btn-sm btn-primary" onclick="abrirModal('empresa')">
+          <i class="bi bi-plus-circle me-1"></i> Adicionar Empresa
+        </button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Perfis de Usuário -->
+  <div class="col-12 col-md-6 col-lg-4">
+    <div class="card config-card">
+      <div class="card-header bg-light">
+        <h5 class="mb-0"><i class="bi bi-shield me-2"></i>Perfis de Usuário</h5>
+      </div>
+      <div class="card-body p-0">
+        <div class="empty-state">
+          <i class="bi bi-lock"></i>
+          <p class="mb-0">Apenas administradores podem gerenciar perfis</p>
+        </div>
+      </div>
+      <div class="card-footer text-end">
+        <button class="btn btn-sm btn-secondary" disabled>
+          <i class="bi bi-lock me-1"></i> Acesso Restrito
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de Cadastro/Edição -->
+<div class="modal fade" id="modalConfiguracao" tabindex="-1" aria-labelledby="modalConfiguracaoLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalConfiguracaoLabel">Adicionar Item</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <form id="form-configuracao">
+          <input type="hidden" id="tipo-configuracao">
+          <input type="hidden" id="item-id">
+          
+          <div class="mb-3">
+            <label class="form-label" id="label-nome">Nome</label>
+            <input type="text" class="form-control" id="nome-item" required>
+          </div>
+          
+          <!-- Campos específicos por tipo -->
+          <div id="campos-especificos"></div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="btn-salvar-configuracao">Salvar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Loading Overlay -->
+<div id="loading-overlay" class="position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-25 d-none" style="z-index: 1000;">
+  <div class="position-absolute top-50 start-50 translate-middle">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Carregando...</span>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Tipos de configuração suportados
+  const tiposConfiguracao = {
+    'cargo': { endpoint: '/api/cargos', nome: 'Cargo' },
+    'setor': { endpoint: '/api/setores', nome: 'Setor' },
+    'local': { endpoint: '/api/locais', nome: 'Local' },
+    'empresa': { endpoint: '/api/empresas', nome: 'Empresa' }
+  };
+  
+  // Carrega todas as listas ao iniciar
+  async function carregarTodasListas() {
+    try {
+      await Promise.all([
+        carregarLista('cargo'),
+        carregarLista('setor'),
+        carregarLista('local'),
+        carregarLista('empresa')
+      ]);
+    } catch (error) {
+      console.error('Erro inesperado ao carregar listas:', error);
+      // Não mostra alerta para o usuário - apenas log no console
+    }
+  }
+  
+  // Carrega uma lista específica
+  async function carregarLista(tipo) {
+    const container = document.getElementById(`lista-${tipo}s`);
+    
+    try {
+      const response = await fetch(`/api/${tipo}s`);
+      
+      // Verifica se a API está respondendo corretamente
+      if (!response.ok) {
+        // Se for erro 404 ou 500, mostra mensagem amigável
+        container.innerHTML = `
+          <div class="empty-state">
+            <i class="bi bi-exclamation-triangle"></i>
+            <p class="mb-0">API não configurada ainda</p>
+            <small class="text-muted">Configure seu backend primeiro</small>
+          </div>
+        `;
+        return;
+      }
+      
+      const dados = await response.json();
+      
+      if (!Array.isArray(dados)) {
+        // Resposta inválida da API
+        container.innerHTML = `
+          <div class="empty-state">
+            <i class="bi bi-bug"></i>
+            <p class="mb-0">Resposta inválida da API</p>
+          </div>
+        `;
+        return;
+      }
+      
+      if (dados.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <i class="bi bi-folder-plus"></i>
+            <p class="mb-0">Nenhum ${tiposConfiguracao[tipo].nome.toLowerCase()} cadastrado</p>
+            <small class="text-muted">Clique em "Adicionar" para começar</small>
+          </div>
+        `;
+        return;
+      }
+      
+      let html = '';
+      dados.forEach(item => {
+        html += `
+          <div class="item-lista">
+            <span>${item.nome || item.ambiente || item.nome}</span>
+            <div>
+              <button class="btn btn-outline-secondary btn-acao" onclick="editarItem('${tipo}', ${item.id})">
+                <i class="bi bi-pencil"></i>
+              </button>
+              <button class="btn btn-outline-danger btn-acao" onclick="excluirItem('${tipo}', ${item.id})">
+                <i class="bi bi-trash"></i>
+              </button>
+            </div>
+          </div>
+        `;
+      });
+      
+      container.innerHTML = html;
+      
+    } catch (error) {
+      // Erro de rede ou CORS - não é um erro do usuário
+      container.innerHTML = `
+        <div class="empty-state">
+          <i class="bi bi-plug"></i>
+          <p class="mb-0">Backend não disponível</p>
+          <small class="text-muted">Verifique sua conexão</small>
+        </div>
+      `;
+    }
+  }
+  
+  // Abre modal para adicionar/editar item
+  function abrirModal(tipo, item = null) {
+    const modal = new bootstrap.Modal(document.getElementById('modalConfiguracao'));
+    const modalTitle = document.getElementById('modalConfiguracaoLabel');
+    const labelNome = document.getElementById('label-nome');
+    const nomeInput = document.getElementById('nome-item');
+    const camposEspecificos = document.getElementById('campos-especificos');
+    const tipoInput = document.getElementById('tipo-configuracao');
+    const idInput = document.getElementById('item-id');
+    
+    // Define o tipo
+    tipoInput.value = tipo;
+    modalTitle.textContent = item ? `Editar ${tiposConfiguracao[tipo].nome}` : `Adicionar ${tiposConfiguracao[tipo].nome}`;
+    labelNome.textContent = `${tiposConfiguracao[tipo].nome}:`;
+    
+    // Limpa campos
+    nomeInput.value = '';
+    camposEspecificos.innerHTML = '';
+    idInput.value = '';
+    
+    // Preenche se for edição
+    if (item) {
+      nomeInput.value = item.nome || item.ambiente || '';
+      idInput.value = item.id;
+    }
+    
+    // Adiciona campos específicos por tipo
+    if (tipo === 'local') {
+      camposEspecificos.innerHTML = `
+        <div class="row g-2">
+          <div class="col-6">
+            <label class="form-label">Ambiente</label>
+            <select class="form-select" id="ambiente-local" required>
+              <option value="obra">Obra</option>
+              <option value="canteiro">Canteiro</option>
+              <option value="sede">Sede</option>
+            </select>
+          </div>
+          <div class="col-6">
+            <label class="form-label">Prédio (opcional)</label>
+            <input type="text" class="form-control" id="predio-local" placeholder="Ex: TB09">
+          </div>
+        </div>
+        <div class="mt-2">
+          <label class="form-label">Tipo de Local</label>
+          <select class="form-select" id="tipo-local" required>
+            <option value="escritorio">Escritório</option>
+            <option value="canteiro">Canteiro</option>
+            <option value="almoxarifado">Almoxarifado</option>
+            <option value="ti">TI</option>
+          </select>
+        </div>
+      `;
+    } else if (tipo === 'empresa') {
+      camposEspecificos.innerHTML = `
+        <div class="mb-3">
+          <label class="form-label">Tipo</label>
+          <select class="form-select" id="tipo-empresa" required>
+            <option value="propria">Própria</option>
+            <option value="fornecedor">Fornecedor</option>
+          </select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">CNPJ (opcional)</label>
+          <input type="text" class="form-control" id="cnpj-empresa" placeholder="00.000.000/0000-00">
+        </div>
+      `;
+    }
+    
+    modal.show();
+  }
+  
+  // Função para editar item
+  async function editarItem(tipo, id) {
+    try {
+      const response = await fetch(`/api/${tipo}s/${id}`);
+      if (!response.ok) throw new Error('Item não encontrado');
+      
+      const item = await response.json();
+      abrirModal(tipo, item);
+    } catch (error) {
+      alert('Erro ao carregar item para edição.');
+    }
+  }
+  
+  // Função para excluir item
+  async function excluirItem(tipo, id) {
+    if (!confirm(`Tem certeza que deseja excluir este ${tiposConfiguracao[tipo].nome.toLowerCase()}?`)) {
+      return;
+    }
+    
+    try {
+      const response = await fetch(`/api/${tipo}s/${id}`, {
+        method: 'DELETE'
+      });
+      
+      if (response.ok) {
+        alert(`${tiposConfiguracao[tipo].nome} excluído com sucesso!`);
+        carregarLista(tipo);
+      } else {
+        alert(`Erro ao excluir ${tiposConfiguracao[tipo].nome.toLowerCase()}.`);
+      }
+    } catch (error) {
+      alert('Erro de conexão. Tente novamente.');
+    }
+  }
+  
+  // Salva item no modal
+  document.getElementById('btn-salvar-configuracao').addEventListener('click', async function() {
+    const tipo = document.getElementById('tipo-configuracao').value;
+    const id = document.getElementById('item-id').value;
+    const nome = document.getElementById('nome-item').value.trim();
+    
+    if (!nome) {
+      alert('O nome é obrigatório.');
+      return;
+    }
+    
+    let dados = { nome };
+    
+    // Adiciona campos específicos
+    if (tipo === 'local') {
+      dados.ambiente = document.getElementById('ambiente-local').value;
+      dados.predio = document.getElementById('predio-local').value || null;
+      dados.tipo_local = document.getElementById('tipo-local').value;
+      dados.codigo = `${dados.predio || dados.ambiente}-${nome.replace(/\s+/g, '_').toUpperCase()}`;
+    } else if (tipo === 'empresa') {
+      dados.tipo = document.getElementById('tipo-empresa').value;
+      dados.cnpj = document.getElementById('cnpj-empresa').value || null;
+    }
+    
+    try {
+      document.getElementById('loading-overlay').classList.remove('d-none');
+      
+      let url = `/api/${tipo}s`;
+      let method = 'POST';
+      
+      if (id) {
+        url += `/${id}`;
+        method = 'PUT';
+      }
+      
+      const response = await fetch(url, {
+        method: method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(dados)
+      });
+      
+      if (response.ok) {
+        const modal = bootstrap.Modal.getInstance(document.getElementById('modalConfiguracao'));
+        modal.hide();
+        alert(`${tiposConfiguracao[tipo].nome} ${id ? 'atualizado' : 'criado'} com sucesso!`);
+        carregarLista(tipo);
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        alert(`Erro ao salvar: ${errorData.erro || 'Falha na operação'}`);
+      }
+      
+    } catch (error) {
+      alert('Erro de conexão. Verifique se o backend está rodando.');
+    } finally {
+      document.getElementById('loading-overlay').classList.add('d-none');
+    }
+  });
+  
+  // Inicialização
+  document.addEventListener('DOMContentLoaded', function() {
+    carregarTodasListas();
+  });
+</script>
+{% endblock %}

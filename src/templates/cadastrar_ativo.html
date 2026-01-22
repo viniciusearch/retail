@@ -1,0 +1,524 @@
+{% extends "base.html" %}
+
+{% block title %}Cadastrar Ativo - Gestão de Ativos{% endblock %}
+
+{% block extra_css %}
+<style>
+  .form-step {
+    display: none;
+  }
+  
+  .form-step.active {
+    display: block;
+  }
+  
+  .step-indicator {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 30px;
+  }
+  
+  .step-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #e9ecef;
+    color: #6c757d;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    margin: 0 10px;
+    transition: all 0.3s ease;
+  }
+  
+  .step-circle.active {
+    background: var(--accent);
+    color: white;
+  }
+  
+  .step-circle.completed {
+    background: #28a745;
+    color: white;
+  }
+  
+  .empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: #6c757d;
+  }
+  
+  .empty-state i {
+    font-size: 4rem;
+    margin-bottom: 20px;
+    color: #dee2e6;
+  }
+  
+  .config-required {
+    background: #fff3cd;
+    border-left: 4px solid #ffc107;
+    padding: 15px;
+    margin: 20px 0;
+    border-radius: 4px;
+  }
+  
+  .dynamic-field {
+    display: none;
+  }
+  
+  .dynamic-field.show {
+    display: block;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<header class="d-flex justify-content-between align-items-center mb-4">
+  <h2 class="mb-0"><i class="bi bi-plus-circle me-2"></i>Cadastrar Novo Ativo</h2>
+  <div class="d-flex gap-2">
+    <a href="/ativos" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left me-1"></i> Voltar
+    </a>
+  </div>
+</header>
+
+<!-- Verificação de configurações mínimas -->
+<div id="verificacao-config" class="alert alert-warning d-none">
+  <i class="bi bi-exclamation-triangle me-2"></i>
+  <strong>Configurações necessárias!</strong>
+  <p class="mb-0">Antes de cadastrar ativos, você precisa configurar as listas básicas do sistema.</p>
+</div>
+
+<!-- Formulário de cadastro -->
+<div id="form-container" class="d-none">
+  <div class="step-indicator">
+    <div class="step-circle active" data-step="1">1</div>
+    <div class="step-circle" data-step="2">2</div>
+    <div class="step-circle" data-step="3">3</div>
+  </div>
+  
+  <form id="form-cadastro-ativo">
+    <!-- Passo 1: Tipo e Informações Básicas -->
+    <div class="form-step active" id="step-1">
+      <div class="card">
+        <div class="card-header bg-light">
+          <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>Informações Básicas</h5>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Código do Ativo <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="codigo_ativo" required placeholder="Ex: NB-PAT12345">
+              <div class="form-text">Use um código único e descritivo</div>
+            </div>
+            
+            <div class="col-md-6">
+              <label class="form-label">Tipo de Ativo <span class="text-danger">*</span></label>
+              <select class="form-select" id="tipo_ativo" required>
+                <option value="">Selecione o tipo</option>
+                <option value="hardware">Hardware</option>
+                <option value="periferico">Periférico</option>
+                <option value="rede">Rede</option>
+                <option value="software">Software</option>
+                <option value="mobiliario">Mobiliário</option>
+                <option value="servico">Serviço</option>
+              </select>
+            </div>
+            
+            <div class="col-md-6">
+              <label class="form-label">Categoria <span class="text-danger">*</span></label>
+              <select class="form-select" id="categoria" required disabled>
+                <option value="">Selecione o tipo primeiro</option>
+              </select>
+            </div>
+            
+            <div class="col-12">
+              <label class="form-label">Descrição</label>
+              <input type="text" class="form-control" id="descricao" placeholder="Ex: Dell Latitude 5420, i5, 16GB RAM">
+            </div>
+            
+            <div class="col-md-6">
+              <label class="form-label">Status <span class="text-danger">*</span></label>
+              <select class="form-select" id="status" required>
+                <option value="Em uso">Em uso</option>
+                <option value="Devolvido">Devolvido</option>
+                <option value="Desmobilizado">Desmobilizado</option>
+              </select>
+            </div>
+            
+            <div class="col-md-6">
+              <label class="form-label">Projeto</label>
+              <input type="text" class="form-control" id="projeto" placeholder="Ex: SCALA DATACENTER TB09">
+            </div>
+          </div>
+        </div>
+        <div class="card-footer text-end">
+          <button type="button" class="btn btn-primary" onclick="nextStep(1)">Próximo</button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Passo 2: Relacionamentos -->
+    <div class="form-step" id="step-2">
+      <div class="card">
+        <div class="card-header bg-light">
+          <h5 class="mb-0"><i class="bi bi-link-45deg me-2"></i>Relacionamentos</h5>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Proprietário <span class="text-danger">*</span></label>
+              <select class="form-select" id="proprietario_id" required>
+                <option value="">Carregando...</option>
+              </select>
+            </div>
+            
+            <div class="col-md-6">
+              <label class="form-label">Local Atual <span class="text-danger">*</span></label>
+              <select class="form-select" id="local_atual_id" required>
+                <option value="">Carregando...</option>
+              </select>
+            </div>
+            
+            <div class="col-md-6">
+              <label class="form-label">Usuário Atual</label>
+              <select class="form-select" id="usuario_atual_id">
+                <option value="">Disponível</option>
+                <option value="">Carregando...</option>
+              </select>
+            </div>
+            
+            <div class="col-md-6">
+              <label class="form-label">Setor</label>
+              <select class="form-select" id="setor_id">
+                <option value="">Carregando...</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="card-footer text-end">
+          <button type="button" class="btn btn-secondary" onclick="prevStep(2)">Anterior</button>
+          <button type="button" class="btn btn-primary" onclick="nextStep(2)">Próximo</button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Passo 3: Atributos Específicos -->
+    <div class="form-step" id="step-3">
+      <div class="card">
+        <div class="card-header bg-light">
+          <h5 class="mb-0"><i class="bi bi-gear me-2"></i>Atributos Específicos</h5>
+        </div>
+        <div class="card-body">
+          <div id="atributos-especificos">
+            <!-- Será preenchido dinamicamente -->
+            <div class="text-center py-4 text-muted">
+              Selecione o tipo de ativo no passo 1 para ver os atributos específicos.
+            </div>
+          </div>
+        </div>
+        <div class="card-footer text-end">
+          <button type="button" class="btn btn-secondary" onclick="prevStep(3)">Anterior</button>
+          <button type="submit" class="btn btn-success">
+            <i class="bi bi-check-circle me-1"></i> Cadastrar Ativo
+          </button>
+        </div>
+      </div>
+    </div>
+  </form>
+</div>
+
+<!-- Estado vazio - sem configurações -->
+<div id="empty-state" class="d-none">
+  <div class="empty-state">
+    <i class="bi bi-folder-plus"></i>
+    <h4>Nenhuma configuração encontrada</h4>
+    <p class="mb-4">Antes de cadastrar ativos, você precisa configurar as listas básicas do sistema.</p>
+    <div class="d-grid gap-2 d-md-flex justify-content-md-center">
+      <a href="/configuracoes" class="btn btn-primary">
+        <i class="bi bi-gear me-1"></i> Ir para Configurações
+      </a>
+      <a href="/dashboard" class="btn btn-outline-secondary">
+        <i class="bi bi-house-door me-1"></i> Voltar ao Dashboard
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- Loading Overlay -->
+<div id="loading-overlay" class="position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-25 d-none" style="z-index: 1000;">
+  <div class="position-absolute top-50 start-50 translate-middle">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Carregando...</span>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Mapeamento de categorias por tipo de ativo
+  const categoriasPorTipo = {
+    'hardware': ['Notebook', 'Desktop', 'Tablet', 'Smartphone', 'Servidor'],
+    'periferico': ['Monitor', 'Teclado', 'Mouse', 'Webcam', 'Headset', 'Impressora', 'Plotter'],
+    'rede': ['Roteador', 'Switch', 'Access Point', 'Antena Wi-Fi'],
+    'software': ['AutoCAD', 'Office', 'Windows', 'Adobe', 'Outro Software'],
+    'mobiliario': ['Cadeira', 'Mesa', 'Arquivo', 'Organizador', 'Armário'],
+    'servico': ['Locação', 'Manutenção', 'Suporte']
+  };
+  
+  // Atributos específicos por categoria
+  const atributosPorCategoria = {
+    'Notebook': [
+      { campo: 'numero_serie', label: 'Número de Série', tipo: 'text' },
+      { campo: 'host', label: 'Nome do Host', tipo: 'text' },
+      { campo: 'teamviewer_id', label: 'TeamViewer ID', tipo: 'text' },
+      { campo: 'data_aquisicao', label: 'Data de Aquisição', tipo: 'date' }
+    ],
+    'Desktop': [
+      { campo: 'numero_serie', label: 'Número de Série', tipo: 'text' },
+      { campo: 'host', label: 'Nome do Host', tipo: 'text' },
+      { campo: 'teamviewer_id', label: 'TeamViewer ID', tipo: 'text' },
+      { campo: 'data_aquisicao', label: 'Data de Aquisição', tipo: 'date' }
+    ],
+    'Tablet': [
+      { campo: 'numero_serie', label: 'Número de Série', tipo: 'text' },
+      { campo: 'imei', label: 'IMEI', tipo: 'text' },
+      { campo: 'chip', label: 'Chip', tipo: 'text' },
+      { campo: 'data_aquisicao', label: 'Data de Aquisição', tipo: 'date' }
+    ],
+    'Smartphone': [
+      { campo: 'numero_serie', label: 'Número de Série', tipo: 'text' },
+      { campo: 'imei', label: 'IMEI', tipo: 'text' },
+      { campo: 'chip', label: 'Chip', tipo: 'text' },
+      { campo: 'data_aquisicao', label: 'Data de Aquisição', tipo: 'date' }
+    ],
+    'Monitor': [
+      { campo: 'numero_serie', label: 'Número de Série', tipo: 'text' },
+      { campo: 'polegadas', label: 'Polegadas', tipo: 'number' },
+      { campo: 'resolucao', label: 'Resolução', tipo: 'text' },
+      { campo: 'data_aquisicao', label: 'Data de Aquisição', tipo: 'date' }
+    ],
+    'Impressora': [
+      { campo: 'numero_serie', label: 'Número de Série', tipo: 'text' },
+      { campo: 'ip_impressora', label: 'IP da Impressora', tipo: 'text' },
+      { campo: 'toner_preto', label: 'Toner Preto (%)', tipo: 'number' },
+      { campo: 'toner_cores', label: 'Toner Cores (%)', tipo: 'number' },
+      { campo: 'data_aquisicao', label: 'Data de Aquisição', tipo: 'date' }
+    ],
+    'AutoCAD': [
+      { campo: 'chave_licenca', label: 'Chave de Licença', tipo: 'text' },
+      { campo: 'versao', label: 'Versão', tipo: 'text' },
+      { campo: 'data_expiracao', label: 'Data de Expiração', tipo: 'date' },
+      { campo: 'tipo_licenca', label: 'Tipo de Licença', tipo: 'select', opcoes: ['Perpétua', 'Anual', 'Por Usuário', 'Flutuante'] }
+    ],
+    'Office': [
+      { campo: 'chave_licenca', label: 'Chave de Licença', tipo: 'text' },
+      { campo: 'versao', label: 'Versão', tipo: 'text' },
+      { campo: 'data_expiracao', label: 'Data de Expiração', tipo: 'date' }
+    ]
+  };
+  
+  let configValida = false;
+  
+  // Funções de navegação entre passos
+  function nextStep(currentStep) {
+    document.getElementById(`step-${currentStep}`).classList.remove('active');
+    document.getElementById(`step-${currentStep + 1}`).classList.add('active');
+    
+    // Atualiza indicadores
+    document.querySelector(`.step-circle[data-step="${currentStep}"]`).classList.add('completed');
+    document.querySelector(`.step-circle[data-step="${currentStep + 1}"]`).classList.add('active');
+  }
+  
+  function prevStep(currentStep) {
+    document.getElementById(`step-${currentStep}`).classList.remove('active');
+    document.getElementById(`step-${currentStep - 1}`).classList.add('active');
+    
+    // Atualiza indicadores
+    document.querySelector(`.step-circle[data-step="${currentStep}"]`).classList.remove('active');
+    document.querySelector(`.step-circle[data-step="${currentStep - 1}"]`).classList.remove('completed');
+  }
+  
+  // Atualiza categorias quando tipo muda
+  document.getElementById('tipo_ativo').addEventListener('change', function() {
+    const categoriaSelect = document.getElementById('categoria');
+    const tipo = this.value;
+    
+    // Limpa opções anteriores
+    categoriaSelect.innerHTML = '<option value="">Selecione</option>';
+    categoriaSelect.disabled = !tipo;
+    
+    if (tipo && categoriasPorTipo[tipo]) {
+      categoriasPorTipo[tipo].forEach(categoria => {
+        const option = document.createElement('option');
+        option.value = categoria;
+        option.textContent = categoria;
+        categoriaSelect.appendChild(option);
+      });
+    }
+    
+    // Atualiza atributos específicos
+    atualizarAtributosEspecificos();
+  });
+  
+  // Atualiza atributos específicos quando categoria muda
+  document.getElementById('categoria').addEventListener('change', function() {
+    atualizarAtributosEspecificos();
+  });
+  
+  function atualizarAtributosEspecificos() {
+    const tipo = document.getElementById('tipo_ativo').value;
+    const categoria = document.getElementById('categoria').value;
+    const container = document.getElementById('atributos-especificos');
+    
+    if (!tipo || !categoria) {
+      container.innerHTML = '<div class="text-center py-4 text-muted">Selecione o tipo de ativo no passo 1 para ver os atributos específicos.</div>';
+      return;
+    }
+    
+    const chave = categoria; // Usamos a categoria como chave
+    const atributos = atributosPorCategoria[chave] || [];
+    
+    if (atributos.length === 0) {
+      container.innerHTML = '<div class="text-center py-4 text-muted">Nenhum atributo específico para esta categoria.</div>';
+      return;
+    }
+    
+    let html = '<div class="row g-3">';
+    atributos.forEach(atributo => {
+      html += `
+        <div class="col-md-6">
+          <label class="form-label">${atributo.label}</label>`;
+      
+      if (atributo.tipo === 'select') {
+        html += `<select class="form-select" id="${atributo.campo}" name="${atributo.campo}">
+          <option value="">Selecione</option>`;
+        atributo.opcoes.forEach(opcao => {
+          html += `<option value="${opcao}">${opcao}</option>`;
+        });
+        html += '</select>';
+      } else {
+        html += `<input type="${atributo.tipo}" class="form-control" id="${atributo.campo}" name="${atributo.campo}" placeholder="${atributo.label}">`;
+      }
+      
+      html += '</div>';
+    });
+    html += '</div>';
+    
+    container.innerHTML = html;
+  }
+  
+  // Carrega listas de configuração
+  async function carregarListasConfiguracao() {
+    try {
+      const [cargos, setores, locais, empresas] = await Promise.all([
+        fetch('/api/cargos').then(r => r.json()).catch(() => []),
+        fetch('/api/setores').then(r => r.json()).catch(() => []),
+        fetch('/api/locais').then(r => r.json()).catch(() => []),
+        fetch('/api/empresas').then(r => r.json()).catch(() => [])
+      ]);
+      
+      // Verifica se há pelo menos uma configuração em cada lista essencial
+      const temEmpresas = empresas.length > 0;
+      const temLocais = locais.length > 0;
+      
+      if (temEmpresas && temLocais) {
+        configValida = true;
+        document.getElementById('form-container').classList.remove('d-none');
+        document.getElementById('empty-state').classList.add('d-none');
+        document.getElementById('verificacao-config').classList.add('d-none');
+        
+        // Preenche os dropdowns
+        preencherDropdown('proprietario_id', empresas, 'nome');
+        preencherDropdown('local_atual_id', locais, 'nome');
+        preencherDropdown('setor_id', setores, 'nome');
+        preencherDropdown('usuario_atual_id', [], 'nome'); // Usuários virão depois
+        
+      } else {
+        configValida = false;
+        document.getElementById('form-container').classList.add('d-none');
+        document.getElementById('empty-state').classList.remove('d-none');
+        document.getElementById('verificacao-config').classList.remove('d-none');
+      }
+      
+    } catch (error) {
+      console.error('Erro ao carregar configurações:', error);
+      configValida = false;
+      document.getElementById('form-container').classList.add('d-none');
+      document.getElementById('empty-state').classList.remove('d-none');
+    }
+  }
+  
+  function preencherDropdown(elementId, dados, campoTexto) {
+    const select = document.getElementById(elementId);
+    select.innerHTML = '<option value="">Selecione</option>';
+    
+    dados.forEach(item => {
+      const option = document.createElement('option');
+      option.value = item.id;
+      option.textContent = item[campoTexto] || item.nome;
+      select.appendChild(option);
+    });
+  }
+  
+  // Submissão do formulário
+  document.getElementById('form-cadastro-ativo').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    if (!configValida) {
+      alert('Configure as listas básicas antes de cadastrar ativos.');
+      return;
+    }
+    
+    // Coleta dados do formulário
+    const dados = {
+      codigo_ativo: document.getElementById('codigo_ativo').value,
+      tipo_ativo: document.getElementById('tipo_ativo').value,
+      categoria: document.getElementById('categoria').value,
+      descricao: document.getElementById('descricao').value || null,
+      status: document.getElementById('status').value,
+      projeto: document.getElementById('projeto').value || null,
+      proprietario_id: parseInt(document.getElementById('proprietario_id').value) || null,
+      local_atual_id: parseInt(document.getElementById('local_atual_id').value) || null,
+      usuario_atual_id: document.getElementById('usuario_atual_id').value ? parseInt(document.getElementById('usuario_atual_id').value) : null,
+      setor_id: document.getElementById('setor_id').value ? parseInt(document.getElementById('setor_id').value) : null
+    };
+    
+    // Valida campos obrigatórios
+    if (!dados.codigo_ativo || !dados.tipo_ativo || !dados.categoria || !dados.status || !dados.proprietario_id || !dados.local_atual_id) {
+      alert('Preencha todos os campos obrigatórios.');
+      return;
+    }
+    
+    try {
+      document.getElementById('loading-overlay').classList.remove('d-none');
+      
+      const response = await fetch('/api/ativos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(dados)
+      });
+      
+      if (response.ok) {
+        alert('Ativo cadastrado com sucesso!');
+        // Redireciona para gerenciar ativos
+        window.location.href = '/ativos';
+      } else {
+        const error = await response.json().catch(() => ({}));
+        alert(`Erro ao cadastrar: ${error.erro || 'Falha na operação'}`);
+      }
+      
+    } catch (error) {
+      alert('Erro de conexão. Verifique se o backend está rodando.');
+    } finally {
+      document.getElementById('loading-overlay').classList.add('d-none');
+    }
+  });
+  
+  // Inicialização
+  document.addEventListener('DOMContentLoaded', function() {
+    carregarListasConfiguracao();
+  });
+</script>
+{% endblock %} 

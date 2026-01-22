@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Gestão de Ativos{% endblock %}
+
+{% block extra_css %}
+<style>
+  .welcome-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+  }
+  
+  .action-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    cursor: pointer;
+    border: 2px solid #e9ecef;
+  }
+  
+  .action-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    border-color: #0f3460;
+  }
+  
+  .empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: #6c757d;
+  }
+  
+  .empty-state i {
+    font-size: 4rem;
+    margin-bottom: 20px;
+    color: #dee2e6;
+  }
+  
+  .btn-primary-gradient {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+  }
+  
+  .btn-primary-gradient:hover {
+    background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+    transform: translateY(-1px);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<header class="d-flex justify-content-between align-items-center mb-4">
+  <h2 class="mb-0"><i class="bi bi-speedometer2 me-2"></i>Bem-vindo ao Sistema de Gestão de Ativos</h2>
+</header>
+
+<!-- Mensagem de Boas-Vindas -->
+<div class="row mb-4">
+  <div class="col-12">
+    <div class="welcome-card card">
+      <div class="card-body text-center">
+        <h4 class="mb-3">🚀 Seu sistema está pronto para uso!</h4>
+        <p class="mb-0">Comece cadastrando seus primeiros ativos ou configurando as listas básicas do sistema.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Ações Iniciais -->
+<div class="row g-4 mb-4">
+  <!-- Cadastrar Ativo -->
+  <div class="col-12 col-md-6 col-lg-4">
+    <div class="card action-card h-100" onclick="window.location.href='/ativos/cadastrar'">
+      <div class="card-body text-center">
+        <div class="bg-primary bg-opacity-10 p-3 rounded-circle d-inline-block mb-3">
+          <i class="bi bi-plus-circle fs-2 text-primary"></i>
+        </div>
+        <h5 class="mb-2">Cadastrar Ativo</h5>
+        <p class="text-muted mb-0">Adicione notebooks, monitores, licenças de software e outros ativos ao sistema.</p>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Upload em Lote -->
+  <div class="col-12 col-md-6 col-lg-4">
+    <div class="card action-card h-100" onclick="window.location.href='/ativos/lote'">
+      <div class="card-body text-center">
+        <div class="bg-success bg-opacity-10 p-3 rounded-circle d-inline-block mb-3">
+          <i class="bi bi-file-earmark-arrow-up fs-2 text-success"></i>
+        </div>
+        <h5 class="mb-2">Upload em Lote</h5>
+        <p class="text-muted mb-0">Importe múltiplos ativos rapidamente usando um arquivo CSV pré-formatado.</p>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Configurações Iniciais -->
+  <div class="col-12 col-md-6 col-lg-4">
+    <div class="card action-card h-100" onclick="window.location.href='/configuracoes'">
+      <div class="card-body text-center">
+        <div class="bg-warning bg-opacity-10 p-3 rounded-circle d-inline-block mb-3">
+          <i class="bi bi-gear fs-2 text-warning"></i>
+        </div>
+        <h5 class="mb-2">Configurações</h5>
+        <p class="text-muted mb-0">Configure cargos, setores, locais e outros dados básicos do sistema.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Estado Vazio - Sem Dados -->
+<div class="row g-4">
+  <!-- Próximos Passos -->
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-check-circle me-2"></i>Próximos Passos Recomendados</h5>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-4 mb-3">
+            <h6><i class="bi bi-1-circle me-2 text-primary"></i>Configurar Listas Básicas</h6>
+            <p class="text-muted small">Defina os cargos, setores e locais da sua empresa para padronizar os cadastros.</p>
+          </div>
+          <div class="col-md-4 mb-3">
+            <h6><i class="bi bi-2-circle me-2 text-primary"></i>Cadastrar Primeiros Ativos</h6>
+            <p class="text-muted small">Comece com os ativos mais críticos ou recentemente adquiridos.</p>
+          </div>
+          <div class="col-md-4 mb-3">
+            <h6><i class="bi bi-3-circle me-2 text-primary"></i>Configurar Usuários</h6>
+            <p class="text-muted small">Adicione os usuários que terão acesso ao sistema com seus respectivos perfis.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Dicas Rápidas -->
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-lightbulb me-2"></i>Dicas Rápidas</h5>
+      </div>
+      <div class="card-body">
+        <ul class="list-unstyled mb-0">
+          <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i> Use o <strong>Upload em Lote</strong> para migrar dados de planilhas existentes</li>
+          <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i> Configure os <strong>Locais Físicos</strong> seguindo a hierarquia: Obra > TB09 > SMS</li>
+          <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i> Os <strong>Contratos de Locação</strong> podem ser vinculados a múltiplos ativos</li>
+          <li><i class="bi bi-check-circle text-success me-2"></i> Os <strong>Gestores de Área</strong> poderão fazer solicitações diretamente pelo sistema</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Footer informativo -->
+<div class="mt-4 text-center text-muted">
+  <small>
+    Este dashboard se atualizará automaticamente conforme você adicionar ativos e configurar o sistema.
+    <br>
+    Comece pelas <strong>Configurações</strong> para uma melhor experiência de uso.
+  </small>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Nenhuma chamada à API é feita neste dashboard inicial
+  // Tudo é estático para funcionar em sistema limpo
+  
+  // Adiciona efeito de hover suave aos cards
+  document.querySelectorAll('.action-card').forEach(card => {
+    card.addEventListener('mouseenter', function() {
+      this.style.transform = 'translateY(-2px)';
+    });
+    
+    card.addEventListener('mouseleave', function() {
+      this.style.transform = 'translateY(0)';
+    });
+  });
+</script>
+{% endblock %}

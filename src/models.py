@@ -1,10 +1,10 @@
-# src/models.py - VERSÃO REFATORADA
+# src/models.py - VERSÃO ATUALIZADA PARA NOVA ARQUITETURA
 import sqlite3
 import os
 from typing import List, Dict, Any, Optional, Tuple
 
 # Caminho absoluto para o banco (funciona em qualquer ambiente)
-DB_PATH = os.path.join(os.path.dirname(__file__), '..', 'data', 'equipamentos.db')
+DB_PATH = os.path.join(os.path.dirname(__file__), '..', 'data', 'equipamentos_v2.db')
 
 def get_db_connection():
     """Retorna uma conexão com o banco de dados SQLite"""
@@ -12,165 +12,150 @@ def get_db_connection():
     conn.row_factory = sqlite3.Row  # permite acesso por nome da coluna
     return conn
 
-# ============================================================================
-# FUNÇÕES PRINCIPAIS DE CRUD
+# ============================================================================  
+# FUNÇÕES PRINCIPAIS DE CRUD PARA ATIVOS
 # ============================================================================
 
-def buscar_equipamentos(filtros: Dict[str, List[str]]) -> List[sqlite3.Row]:
+def buscar_ativos(filtros: Optional[Dict[str, Any]] = None) -> List[sqlite3.Row]:
     """
-    Busca equipamentos com filtros básicos (mantida para compatibilidade)
+    Busca ativos com filtros avançados
     """
     with get_db_connection() as conn:
         cursor = conn.cursor()
         
-        query = "SELECT * FROM equipamentos WHERE 1=1"
-        params = []
-        
-        if filtros.get("patrimonio"):
-            # Para patrimônio, usamos OR porque é busca específica
-            placeholders = " OR ".join(["patrimonio = ?"] * len(filtros["patrimonio"]))
-            query += f" AND ({placeholders})"
-            params.extend(filtros["patrimonio"])
-        else:
-            # Para outros filtros, usamos IN
-            for campo in ["tipo", "status", "local_atual", "setor", "usuario"]:
-                if filtros.get(campo):
-                    placeholders = ",".join(["?"] * len(filtros[campo]))
-                    query += f" AND {campo} IN ({placeholders})"
-                    params.extend(filtros[campo])
-            
-            if filtros.get("serie"):
-                placeholders = ",".join(["?"] * len(filtros["serie"]))
-                query += f" AND numero_serie IN ({placeholders})"
-                params.extend(filtros["serie"])
-        
-        cursor.execute(query, params)
-        return cursor.fetchall()
-
-def buscar_equipamentos_avancado(
-    filtros: Optional[Dict[str, Any]] = None, 
-    pagina: int = 1, 
-    por_pagina: int = 50, 
-    ordenar_por: str = 'patrimonio', 
-    ordenar_direcao: str = 'ASC'
-) -> Tuple[List[sqlite3.Row], int]:
-    """
-    Busca avançada com filtros complexos e paginação
-    """
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
-        
-        query = "SELECT * FROM equipamentos WHERE 1=1"
+        # Query base com joins
+        query = """
+            SELECT 
+                a.*,
+                e.nome as proprietario_nome,
+                u.nome_completo as usuario_nome,
+                l.nome as local_nome,
+                l.ambiente as local_ambiente,
+                l.predio as local_predio,
+                l.setor as local_setor
+            FROM ativos a
+            LEFT JOIN empresas e ON a.proprietario_id = e.id
+            LEFT JOIN usuarios u ON a.usuario_atual_id = u.id  
+            LEFT JOIN locais l ON a.local_atual_id = l.id
+            WHERE 1=1
+        """
         params = []
         
         if filtros:
-            # Busca por termo geral (procura em múltiplos campos)
-            if filtros.get('q'):
-                termo = f"%{filtros['q']}%"
-                query += """
-                    AND (patrimonio LIKE ? 
-                    OR descritivo LIKE ? 
-                    OR numero_serie LIKE ?
-                    OR usuario LIKE ?
-                    OR host LIKE ?
-                    OR local_atual LIKE ?
-                    OR tipo LIKE ?)
-                """
-                params.extend([termo] * 7)
+            # Filtros por tipo de ativo
+            if filtros.get('tipo_ativo'):
+                if isinstance(filtros['tipo_ativo'], list):
+                    placeholders = ','.join(['?'] * len(filtros['tipo_ativo']))
+                    query += f" AND a.tipo_ativo IN ({placeholders})"
+                    params.extend(filtros['tipo_ativo'])
+                else:
+                    query += " AND a.tipo_ativo = ?"
+                    params.append(filtros['tipo_ativo'])
             
-            # Filtros exatos
-            campos_exatos = ['tipo', 'status', 'setor', 'centro_custo', 'obra_projeto', 'funcao', 'cargo']
-            for campo in campos_exatos:
-                valor = filtros.get(campo)
-                if valor:
-                    if isinstance(valor, list) and len(valor) > 0:
-                        placeholders = ', '.join(['?'] * len(valor))
-                        query += f" AND {campo} IN ({placeholders})"
-                        params.extend(valor)
-                    elif valor:
-                        query += f" AND {campo} = ?"
-                        params.append(valor)
+            # Filtros por categoria
+            if filtros.get('categoria'):
+                if isinstance(filtros['categoria'], list):
+                    placeholders = ','.join(['?'] * len(filtros['categoria']))
+                    query += f" AND a.categoria IN ({placeholders})"
+                    params.extend(filtros['categoria'])
+                else:
+                    query += " AND a.categoria = ?"
+                    params.append(filtros['categoria'])
             
-            # Filtros de texto parcial
-            campos_parcial = ['usuario', 'local_atual', 'descritivo', 'patrimonio', 'serie', 'teamviewer_id', 'host']
-            for campo in campos_parcial:
-                valor = filtros.get(campo)
-                if valor:
-                    query += f" AND {campo} LIKE ?"
-                    params.append(f"%{valor}%")
+            # Filtros por status
+            if filtros.get('status'):
+                if isinstance(filtros['status'], list):
+                    placeholders = ','.join(['?'] * len(filtros['status']))
+                    query += f" AND a.status IN ({placeholders})"
+                    params.extend(filtros['status'])
+                else:
+                    query += " AND a.status = ?"
+                    params.append(filtros['status'])
             
-            # Filtros de data
-            if filtros.get('data_recebimento_inicio'):
-                query += " AND date(data_recebimento) >= date(?)"
-                params.append(filtros['data_recebimento_inicio'])
+            # Filtros por código de ativo (busca parcial)
+            if filtros.get('codigo_ativo'):
+                query += " AND a.codigo_ativo LIKE ?"
+                params.append(f"%{filtros['codigo_ativo']}%")
             
-            if filtros.get('data_recebimento_fim'):
-                query += " AND date(data_recebimento) <= date(?)"
-                params.append(filtros['data_recebimento_fim'])
+            # Filtros por descrição (busca parcial)
+            if filtros.get('descricao'):
+                query += " AND a.descricao LIKE ?"
+                params.append(f"%{filtros['descricao']}%")
             
-            # Filtros de valor
-            if filtros.get('valor_min'):
-                query += " AND valor_locacao >= ?"
-                params.append(float(filtros['valor_min']))
+            # Filtros por ambiente de local
+            if filtros.get('ambiente_local'):
+                query += " AND l.ambiente = ?"
+                params.append(filtros['ambiente_local'])
             
-            if filtros.get('valor_max'):
-                query += " AND valor_locacao <= ?"
-                params.append(float(filtros['valor_max']))
+            # Filtros por prédio (só para obra)
+            if filtros.get('predio'):
+                query += " AND l.predio = ?"
+                params.append(filtros['predio'])
+            
+            # Filtros por setor de local
+            if filtros.get('setor_local'):
+                query += " AND l.setor = ?"
+                params.append(filtros['setor_local'])
+            
+            # Filtros por proprietário
+            if filtros.get('proprietario'):
+                query += " AND e.nome = ?"
+                params.append(filtros['proprietario'])
+            
+            # Filtros por usuário
+            if filtros.get('usuario'):
+                query += " AND u.nome_completo LIKE ?"
+                params.append(f"%{filtros['usuario']}%")
         
-        # Ordenação
-        campos_validos = ['id', 'tipo', 'descritivo', 'centro_custo', 'patrimonio', 
-                         'numero_serie', 'local_atual', 'setor', 'usuario', 'funcao',
-                         'obra_projeto', 'data_recebimento', 'data_devolucao', 
-                         'valor_locacao', 'status', 'cargo', 'host']
-        
-        if ordenar_por in campos_validos:
-            query += f" ORDER BY {ordenar_por} {ordenar_direcao}"
-        else:
-            query += " ORDER BY patrimonio ASC"
-        
-        # Paginação
-        if por_pagina > 0:
-            offset = (pagina - 1) * por_pagina
-            query += " LIMIT ? OFFSET ?"
-            params.extend([por_pagina, offset])
-        
+        query += " ORDER BY a.codigo_ativo"
         cursor.execute(query, params)
-        resultados = cursor.fetchall()
-        
-        # Conta total
-        if por_pagina > 0:
-            # Query de contagem simplificada
-            count_params = []
-            count_query = "SELECT COUNT(*) FROM equipamentos WHERE 1=1"
-            
-            if filtros and filtros.get('q'):
-                count_query += """
-                    AND (patrimonio LIKE ? 
-                    OR descritivo LIKE ? 
-                    OR numero_serie LIKE ?
-                    OR usuario LIKE ?
-                    OR host LIKE ?
-                    OR local_atual LIKE ?
-                    OR tipo LIKE ?)
-                """
-                count_params.extend([f"%{filtros['q']}%"] * 7)
-            
-            cursor.execute(count_query, count_params)
-            total = cursor.fetchone()[0]
-        else:
-            total = len(resultados)
-        
-        return resultados, total
+        return cursor.fetchall()
 
-def atualizar_equipamento(patrimonio: str, dados: Dict[str, Any]) -> bool:
+def criar_ativo(dados: Dict[str, Any]) -> int:
     """
-    Atualiza os dados de um equipamento
+    Cria um novo ativo
+    """
+    campos_obrigatorios = ['codigo_ativo', 'tipo_ativo', 'categoria']
+    for campo in campos_obrigatorios:
+        if not dados.get(campo):
+            raise ValueError(f"Campo obrigatório '{campo}' não fornecido")
+    
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        
+        # Insere ativo principal
+        campos_ativo = ['codigo_ativo', 'tipo_ativo', 'categoria', 'descricao', 'status', 
+                       'proprietario_id', 'usuario_atual_id', 'local_atual_id', 'projeto', 
+                       'data_aquisicao', 'observacoes']
+        
+        valores_ativo = [dados.get(campo) for campo in campos_ativo]
+        
+        placeholders = ','.join(['?'] * len(campos_ativo))
+        campos_str = ','.join(campos_ativo)
+        
+        cursor.execute(f"INSERT INTO ativos ({campos_str}) VALUES ({placeholders})", valores_ativo)
+        ativo_id = cursor.lastrowid
+        
+        # Insere atributos dinâmicos
+        if dados.get('atributos'):
+            for chave, valor in dados['atributos'].items():
+                if valor is not None:
+                    cursor.execute(
+                        "INSERT INTO atributos_ativos (ativo_id, chave, valor) VALUES (?, ?, ?)",
+                        (ativo_id, chave, str(valor))
+                    )
+        
+        conn.commit()
+        return ativo_id
+
+def atualizar_ativo(ativo_id: int, dados: Dict[str, Any]) -> bool:
+    """
+    Atualiza os dados de um ativo
     """
     campos_permitidos = {
-        "status", "data_recebimento", "data_devolucao", "valor_locacao", 
-        "local_atual", "usuario", "teamviewer_id", "cargo", "host", 
-        "descritivo", "centro_custo", "numero_serie", "setor", "obra_projeto", 
-        "observacao", "tipo", "funcao"
+        'codigo_ativo', 'tipo_ativo', 'categoria', 'descricao', 'status',
+        'proprietario_id', 'usuario_atual_id', 'local_atual_id', 'projeto',
+        'data_aquisicao', 'observacoes'
     }
     
     # Filtra apenas os campos válidos
@@ -180,9 +165,9 @@ def atualizar_equipamento(patrimonio: str, dados: Dict[str, Any]) -> bool:
         return False
 
     set_clause = ", ".join([f"{k} = ?" for k in dados_filtrados.keys()])
-    params = list(dados_filtrados.values()) + [patrimonio]
+    params = list(dados_filtrados.values()) + [ativo_id]
 
-    query = f"UPDATE equipamentos SET {set_clause} WHERE patrimonio = ?"
+    query = f"UPDATE ativos SET {set_clause} WHERE id = ?"
     
     with get_db_connection() as conn:
         cursor = conn.cursor()
@@ -190,323 +175,273 @@ def atualizar_equipamento(patrimonio: str, dados: Dict[str, Any]) -> bool:
         conn.commit()
         return cursor.rowcount > 0
 
-# ============================================================================
-# FUNÇÕES DE FILTROS E ESTATÍSTICAS
-# ============================================================================
-
-def obter_valores_distintos(campo: str) -> List[str]:
+def excluir_ativo(ativo_id: int) -> bool:
     """
-    Retorna valores distintos de um campo para usar em filtros
-    """
-    campos_permitidos = ['tipo', 'status', 'centro_custo', 'setor', 
-                        'funcao', 'cargo', 'obra_projeto', 'local_atual', 'usuario']
-    
-    if campo not in campos_permitidos:
-        return []
-    
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute(f"""
-            SELECT DISTINCT {campo} 
-            FROM equipamentos 
-            WHERE {campo} IS NOT NULL 
-            AND {campo} != ''
-            ORDER BY {campo}
-        """)
-        return [row[0] for row in cursor.fetchall()]
-
-def obter_estatisticas_gerais() -> Dict[str, Any]:
-    """
-    Retorna estatísticas gerais dos equipamentos
+    Exclui um ativo (com CASCADE nos atributos)
     """
     with get_db_connection() as conn:
         cursor = conn.cursor()
+        cursor.execute("DELETE FROM ativos WHERE id = ?", (ativo_id,))
+        conn.commit()
+        return cursor.rowcount > 0
+
+# ============================================================================  
+# FUNÇÕES PARA ATRIBUTOS DINÂMICOS
+# ============================================================================
+
+def obter_atributos_ativo(ativo_id: int) -> Dict[str, str]:
+    """
+    Retorna todos os atributos de um ativo
+    """
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT chave, valor FROM atributos_ativos WHERE ativo_id = ?", (ativo_id,))
+        return {row['chave']: row['valor'] for row in cursor.fetchall()}
+
+def atualizar_atributos_ativo(ativo_id: int, atributos: Dict[str, str]) -> None:
+    """
+    Atualiza os atributos de um ativo
+    """
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
         
-        # Total por status
-        cursor.execute("""
-            SELECT status, COUNT(*) as total 
-            FROM equipamentos 
-            GROUP BY status 
-            ORDER BY total DESC
-        """)
-        por_status = cursor.fetchall()
+        # Primeiro, remove todos os atributos existentes
+        cursor.execute("DELETE FROM atributos_ativos WHERE ativo_id = ?", (ativo_id,))
         
-        # Total por tipo
-        cursor.execute("""
-            SELECT tipo, COUNT(*) as total 
-            FROM equipamentos 
-            WHERE tipo IS NOT NULL AND tipo != ''
-            GROUP BY tipo 
-            ORDER BY total DESC
-        """)
-        por_tipo = cursor.fetchall()
+        # Depois, insere os novos
+        for chave, valor in atributos.items():
+            if valor is not None:
+                cursor.execute(
+                    "INSERT INTO atributos_ativos (ativo_id, chave, valor) VALUES (?, ?, ?)",
+                    (ativo_id, chave, str(valor))
+                )
         
-        # Total por centro de custo
-        cursor.execute("""
-            SELECT centro_custo, COUNT(*) as total 
-            FROM equipamentos 
-            WHERE centro_custo IS NOT NULL AND centro_custo != ''
-            GROUP BY centro_custo 
-            ORDER BY total DESC
-        """)
-        por_centro_custo = cursor.fetchall()
+        conn.commit()
+
+# ============================================================================  
+# FUNÇÕES DE FILTROS E LISTAS CONTROLADAS
+# ============================================================================
+
+def obter_valores_distintos_locais() -> Dict[str, List[str]]:
+    """
+    Retorna valores distintos para filtros de locais
+    """
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
         
-        # Equipamentos sem centro de custo
-        cursor.execute("""
-            SELECT COUNT(*) as total_sem_cc
-            FROM equipamentos
-            WHERE centro_custo IS NULL OR centro_custo = ''
-        """)
-        sem_centro_custo = cursor.fetchone()[0]
+        # Ambientes
+        cursor.execute("SELECT DISTINCT ambiente FROM locais ORDER BY ambiente")
+        ambientes = [row[0] for row in cursor.fetchall()]
+        
+        # Prédios (só para obra)
+        cursor.execute("SELECT DISTINCT predio FROM locais WHERE predio IS NOT NULL ORDER BY predio")
+        predios = [row[0] for row in cursor.fetchall()]
+        
+        # Setores
+        cursor.execute("SELECT DISTINCT setor FROM locais ORDER BY setor")
+        setores = [row[0] for row in cursor.fetchall()]
         
         return {
-            'por_status': por_status,
-            'por_tipo': por_tipo,
-            'por_centro_custo': por_centro_custo,
-            'sem_centro_custo': sem_centro_custo
+            'ambientes': ambientes,
+            'predios': predios,
+            'setores': setores
         }
 
-# ============================================================================
-# FUNÇÕES ESPECÍFICAS PARA CENTRO DE CUSTO
-# ============================================================================
-
-def listar_centros_custo() -> List[sqlite3.Row]:
+def obter_valores_distintos_ativos() -> Dict[str, List[str]]:
     """
-    Retorna todos os centros de custo com estatísticas básicas
+    Retorna valores distintos para filtros de ativos
     """
     with get_db_connection() as conn:
         cursor = conn.cursor()
         
-        cursor.execute("""
+        # Tipos de ativo
+        cursor.execute("SELECT DISTINCT tipo_ativo FROM ativos WHERE tipo_ativo IS NOT NULL ORDER BY tipo_ativo")
+        tipos_ativo = [row[0] for row in cursor.fetchall()]
+        
+        # Categorias
+        cursor.execute("SELECT DISTINCT categoria FROM ativos WHERE categoria IS NOT NULL ORDER BY categoria")
+        categorias = [row[0] for row in cursor.fetchall()]
+        
+        # Status
+        cursor.execute("SELECT DISTINCT status FROM ativos WHERE status IS NOT NULL ORDER BY status")
+        status = [row[0] for row in cursor.fetchall()]
+        
+        # Proprietários
+        cursor.execute("SELECT DISTINCT nome FROM empresas ORDER BY nome")
+        proprietarios = [row[0] for row in cursor.fetchall()]
+        
+        return {
+            'tipos_ativo': tipos_ativo,
+            'categorias': categorias,
+            'status': status,
+            'proprietarios': proprietarios
+        }
+
+# ============================================================================  
+# FUNÇÕES PARA CONTRATOS DE LOCAÇÃO
+# ============================================================================
+
+def buscar_contratos_locacao(filtros: Optional[Dict[str, Any]] = None) -> List[sqlite3.Row]:
+    """
+    Busca contratos de locação com filtros
+    """
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        
+        query = """
             SELECT 
-                centro_custo,
-                COUNT(*) as total_equipamentos,
-                COUNT(CASE WHEN status = 'Em uso' THEN 1 END) as em_uso,
-                COUNT(CASE WHEN status = 'Disponível' THEN 1 END) as disponivel,
-                COUNT(CASE WHEN status = 'Manutenção' THEN 1 END) as manutencao,
-                COUNT(CASE WHEN status = 'Baixado' THEN 1 END) as baixado,
-                SUM(CASE WHEN valor_locacao IS NOT NULL THEN valor_locacao ELSE 0 END) as valor_total
-            FROM equipamentos
-            WHERE centro_custo IS NOT NULL 
-            AND centro_custo != ''
-            GROUP BY centro_custo
-            ORDER BY total_equipamentos DESC
-        """)
-        
-        return cursor.fetchall()
-
-def buscar_equipamentos_por_centro_custo(
-    centro_custo: str, 
-    filtros: Optional[Dict[str, Any]] = None,
-    pagina: int = 1,
-    por_pagina: int = 100
-) -> Tuple[List[sqlite3.Row], int]:
-    """
-    Lista equipamentos de um centro de custo específico
-    """
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
-        
-        query = "SELECT * FROM equipamentos WHERE centro_custo = ?"
-        params = [centro_custo]
+                c.*,
+                e.nome as fornecedor_nome
+            FROM contratos_locacao c
+            LEFT JOIN empresas e ON c.empresa_id = e.id
+            WHERE 1=1
+        """
+        params = []
         
         if filtros:
-            # Status
+            if filtros.get('numero_contrato'):
+                query += " AND c.numero_contrato LIKE ?"
+                params.append(f"%{filtros['numero_contrato']}%")
+            
+            if filtros.get('fornecedor'):
+                query += " AND e.nome = ?"
+                params.append(filtros['fornecedor'])
+            
             if filtros.get('status'):
-                query += " AND status = ?"
+                query += " AND c.status = ?"
+                params.append(filtros['status'])
+        
+        query += " ORDER BY c.data_inicio DESC"
+        cursor.execute(query, params)
+        return cursor.fetchall()
+
+def vincular_ativo_contrato(ativo_id: int, contrato_id: int) -> bool:
+    """
+    Vincula um ativo a um contrato de locação
+    """
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        try:
+            cursor.execute(
+                "INSERT INTO ativos_contratos (ativo_id, contrato_id) VALUES (?, ?)",
+                (ativo_id, contrato_id)
+            )
+            conn.commit()
+            return True
+        except sqlite3.IntegrityError:
+            return False
+
+def desvincular_ativo_contrato(ativo_id: int, contrato_id: int) -> bool:
+    """
+    Remove o vínculo entre ativo e contrato
+    """
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            "DELETE FROM ativos_contratos WHERE ativo_id = ? AND contrato_id = ?",
+            (ativo_id, contrato_id)
+        )
+        conn.commit()
+        return cursor.rowcount > 0
+
+def obter_contratos_do_ativo(ativo_id: int) -> List[sqlite3.Row]:
+    """
+    Retorna todos os contratos vinculados a um ativo
+    """
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT 
+                c.*,
+                e.nome as fornecedor_nome
+            FROM ativos_contratos ac
+            JOIN contratos_locacao c ON ac.contrato_id = c.id
+            JOIN empresas e ON c.empresa_id = e.id
+            WHERE ac.ativo_id = ?
+        """, (ativo_id,))
+        return cursor.fetchall()
+
+# ============================================================================  
+# FUNÇÕES PARA SOLICITAÇÕES
+# ============================================================================
+
+def criar_solicitacao(dados: Dict[str, Any]) -> int:
+    """
+    Cria uma nova solicitação
+    """
+    campos_obrigatorios = ['tipo_solicitacao', 'descricao', 'setor_solicitante_id', 'gestor_solicitante_id']
+    for campo in campos_obrigatorios:
+        if not dados.get(campo):
+            raise ValueError(f"Campo obrigatório '{campo}' não fornecido")
+    
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        
+        campos = ['tipo_solicitacao', 'descricao', 'quantidade', 'especificacoes',
+                 'setor_solicitante_id', 'gestor_solicitante_id', 'prioridade']
+        valores = [dados.get(campo) for campo in campos]
+        
+        placeholders = ','.join(['?'] * len(campos))
+        campos_str = ','.join(campos)
+        
+        cursor.execute(f"INSERT INTO solicitacoes ({campos_str}) VALUES ({placeholders})", valores)
+        conn.commit()
+        return cursor.lastrowid
+
+def buscar_solicitacoes(filtros: Optional[Dict[str, Any]] = None) -> List[sqlite3.Row]:
+    """
+    Busca solicitações com filtros
+    """
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        
+        query = """
+            SELECT 
+                s.*,
+                setor.nome as setor_solicitante_nome,
+                gestor.nome_completo as gestor_solicitante_nome,
+                aprovador.nome_completo as aprovador_nome,
+                executor.nome_completo as executor_nome
+            FROM solicitacoes s
+            LEFT JOIN setores setor ON s.setor_solicitante_id = setor.id
+            LEFT JOIN usuarios gestor ON s.gestor_solicitante_id = gestor.id
+            LEFT JOIN usuarios aprovador ON s.aprovador_id = aprovador.id
+            LEFT JOIN usuarios executor ON s.executor_id = executor.id
+            WHERE 1=1
+        """
+        params = []
+        
+        if filtros:
+            if filtros.get('status'):
+                query += " AND s.status = ?"
                 params.append(filtros['status'])
             
-            # Tipo
-            if filtros.get('tipo'):
-                query += " AND tipo = ?"
-                params.append(filtros['tipo'])
+            if filtros.get('setor_solicitante_id'):
+                query += " AND s.setor_solicitante_id = ?"
+                params.append(filtros['setor_solicitante_id'])
             
-            # Usuário (busca parcial)
-            if filtros.get('usuario'):
-                query += " AND usuario LIKE ?"
-                params.append(f"%{filtros['usuario']}%")
-            
-            # Local
-            if filtros.get('local'):
-                query += " AND local_atual LIKE ?"
-                params.append(f"%{filtros['local']}%")
-            
-            # Setor
-            if filtros.get('setor'):
-                query += " AND setor = ?"
-                params.append(filtros['setor'])
+            if filtros.get('gestor_solicitante_id'):
+                query += " AND s.gestor_solicitante_id = ?"
+                params.append(filtros['gestor_solicitante_id'])
         
-        # Ordenação
-        ordenar_por = filtros.get('ordenar_por', 'patrimonio') if filtros else 'patrimonio'
-        ordenar_direcao = filtros.get('ordenar_direcao', 'ASC') if filtros else 'ASC'
-        
-        campos_validos = ['patrimonio', 'tipo', 'usuario', 'local_atual', 'setor', 
-                         'status', 'data_recebimento', 'valor_locacao']
-        
-        if ordenar_por in campos_validos:
-            query += f" ORDER BY {ordenar_por} {ordenar_direcao}"
-        else:
-            query += " ORDER BY patrimonio ASC"
-        
-        # Paginação
-        if por_pagina > 0:
-            offset = (pagina - 1) * por_pagina
-            query += " LIMIT ? OFFSET ?"
-            params.extend([por_pagina, offset])
-        
+        query += " ORDER BY s.data_solicitacao DESC"
         cursor.execute(query, params)
-        resultados = cursor.fetchall()
-        
-        # Conta total
-        count_query = "SELECT COUNT(*) FROM equipamentos WHERE centro_custo = ?"
-        count_params = [centro_custo]
-        
-        if filtros and filtros.get('status'):
-            count_query += " AND status = ?"
-            count_params.append(filtros['status'])
-        
-        cursor.execute(count_query, count_params)
-        total = cursor.fetchone()[0]
-        
-        return resultados, total
-
-def obter_resumo_centro_custo(centro_custo: str) -> Optional[Dict[str, Any]]:
-    """
-    Retorna resumo detalhado de um centro de custo
-    """
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
-        
-        # Verifica se o centro de custo existe
-        cursor.execute("SELECT COUNT(*) FROM equipamentos WHERE centro_custo = ?", (centro_custo,))
-        total_equipamentos = cursor.fetchone()[0]
-        
-        if total_equipamentos == 0:
-            return None
-        
-        # Informações gerais
-        cursor.execute("""
-            SELECT 
-                COUNT(DISTINCT tipo) as tipos_diferentes,
-                COUNT(DISTINCT usuario) as usuarios_diferentes,
-                COUNT(DISTINCT setor) as setores_diferentes,
-                MIN(data_recebimento) as primeira_data,
-                MAX(data_recebimento) as ultima_data,
-                SUM(CASE WHEN valor_locacao IS NOT NULL THEN valor_locacao ELSE 0 END) as investimento_total,
-                AVG(valor_locacao) as valor_medio
-            FROM equipamentos
-            WHERE centro_custo = ?
-        """, (centro_custo,))
-        
-        info_geral = cursor.fetchone()
-        
-        # Distribuição por status
-        cursor.execute("""
-            SELECT 
-                status,
-                COUNT(*) as quantidade,
-                SUM(CASE WHEN valor_locacao IS NOT NULL THEN valor_locacao ELSE 0 END) as valor_total
-            FROM equipamentos
-            WHERE centro_custo = ?
-            GROUP BY status
-            ORDER BY quantidade DESC
-        """, (centro_custo,))
-        
-        distribuicao_status = cursor.fetchall()
-        
-        # Distribuição por tipo
-        cursor.execute("""
-            SELECT 
-                tipo,
-                COUNT(*) as quantidade,
-                SUM(CASE WHEN valor_locacao IS NOT NULL THEN valor_locacao ELSE 0 END) as valor_total,
-                AVG(valor_locacao) as valor_medio
-            FROM equipamentos
-            WHERE centro_custo = ?
-            AND tipo IS NOT NULL AND tipo != ''
-            GROUP BY tipo
-            ORDER BY quantidade DESC
-            LIMIT 10
-        """, (centro_custo,))
-        
-        distribuicao_tipo = cursor.fetchall()
-        
-        return {
-            'total_equipamentos': total_equipamentos,
-            'info_geral': info_geral,
-            'distribuicao_status': distribuicao_status,
-            'distribuicao_tipo': distribuicao_tipo
-        }
-
-def obter_equipamentos_mais_valiosos_centro_custo(
-    centro_custo: str, 
-    limite: int = 5
-) -> List[sqlite3.Row]:
-    """
-    Retorna os equipamentos mais valiosos de um centro de custo
-    """
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
-        
-        cursor.execute("""
-            SELECT 
-                patrimonio,
-                tipo,
-                descritivo,
-                usuario,
-                local_atual,
-                valor_locacao,
-                status
-            FROM equipamentos
-            WHERE centro_custo = ?
-            AND valor_locacao IS NOT NULL
-            ORDER BY valor_locacao DESC
-            LIMIT ?
-        """, (centro_custo, limite))
-        
         return cursor.fetchall()
 
-def obter_equipamentos_recentes_centro_custo(
-    centro_custo: str, 
-    limite: int = 10
-) -> List[sqlite3.Row]:
-    """
-    Retorna os equipamentos mais recentes de um centro de custo
-    """
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
-        
-        cursor.execute("""
-            SELECT 
-                patrimonio,
-                tipo,
-                descritivo,
-                usuario,
-                data_recebimento,
-                status
-            FROM equipamentos
-            WHERE centro_custo = ?
-            AND data_recebimento IS NOT NULL
-            ORDER BY data_recebimento DESC
-            LIMIT ?
-        """, (centro_custo, limite))
-        
-        return cursor.fetchall()
-
-# ============================================================================
+# ============================================================================  
 # FUNÇÕES AUXILIARES
 # ============================================================================
 
-def contar_equipamentos_centro_custo(centro_custo: str) -> int:
-    """Retorna o total de equipamentos de um centro de custo"""
+def contar_ativos() -> int:
+    """Retorna o total de ativos"""
     with get_db_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute("SELECT COUNT(*) FROM equipamentos WHERE centro_custo = ?", (centro_custo,))
+        cursor.execute("SELECT COUNT(*) FROM ativos")
         return cursor.fetchone()[0]
 
-def verificar_centro_custo_existe(centro_custo: str) -> bool:
-    """Verifica se um centro de custo existe"""
+def contar_ativos_por_status() -> List[sqlite3.Row]:
+    """Retorna contagem de ativos por status"""
     with get_db_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute("SELECT 1 FROM equipamentos WHERE centro_custo = ? LIMIT 1", (centro_custo,))
-        return cursor.fetchone() is not None
+        cursor.execute("SELECT status, COUNT(*) as total FROM ativos GROUP BY status")
+        return cursor.fetchall()
