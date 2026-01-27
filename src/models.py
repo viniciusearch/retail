@@ -2,6 +2,7 @@
 import sqlite3
 import os
 from typing import List, Dict, Any, Optional, Tuple
+import hashlib
 
 # Caminho absoluto para o banco (funciona em qualquer ambiente)
 DB_PATH = os.path.join(os.path.dirname(__file__), '..', 'data', 'equipamentos_v2.db')
@@ -13,8 +14,68 @@ def get_db_connection():
     return conn
 
 # ============================================================================  
+# FUNÇÕES DE AUTENTICAÇÃO
+# ============================================================================  
+
+def hash_senha(senha: str) -> str:
+    """
+    Gera hash SHA256 da senha
+    """
+    return hashlib.sha256(senha.encode('utf-8')).hexdigest()
+
+def verificar_credenciais(email: str, senha: str) -> Optional[Dict[str, Any]]:
+    """
+    Verifica as credenciais do usuário e retorna seus dados se válido
+    """
+    senha_hash = hash_senha(senha)
+    
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT 
+                u.id,
+                u.nome_completo,
+                u.email,
+                u.perfil_id,
+                p.nome as perfil,
+                u.status
+            FROM usuarios u
+            JOIN perfis_usuario p ON u.perfil_id = p.id
+            WHERE u.email = ? AND u.senha_hash = ? AND u.status = 'Ativo'
+        """, (email, senha_hash))
+        
+        usuario = cursor.fetchone()
+        return dict(usuario) if usuario else None
+
+def criar_usuario_inicial():
+    """
+    Cria usuário administrador inicial se não existir
+    """
+    senha_admin = "admin123"  # Senha padrão - deve ser alterada após primeiro login
+    senha_hash = hash_senha(senha_admin)
+    
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        
+        # Verifica se já existe usuário administrador
+        cursor.execute("SELECT COUNT(*) FROM usuarios WHERE email = 'admin@empresa.com'")
+        if cursor.fetchone()[0] == 0:
+            # Insere usuário administrador
+            cursor.execute("""
+                INSERT INTO usuarios 
+                (nome_completo, email, senha_hash, perfil_id, status)
+                VALUES (?, ?, ?, ?, ?)
+            """, ('Administrador', 'admin@empresa.com', senha_hash, 1, 'Ativo'))
+            
+            conn.commit()
+            print("Usuário administrador criado:")
+            print(f"Email: admin@empresa.com")
+            print(f"Senha: {senha_admin}")
+            print("⚠️  Altere a senha após o primeiro login!")
+
+# ============================================================================  
 # FUNÇÕES PRINCIPAIS DE CRUD PARA ATIVOS
-# ============================================================================
+# ============================================================================  
 
 def buscar_ativos(filtros: Optional[Dict[str, Any]] = None) -> List[sqlite3.Row]:
     """
@@ -187,7 +248,7 @@ def excluir_ativo(ativo_id: int) -> bool:
 
 # ============================================================================  
 # FUNÇÕES PARA ATRIBUTOS DINÂMICOS
-# ============================================================================
+# ============================================================================  
 
 def obter_atributos_ativo(ativo_id: int) -> Dict[str, str]:
     """
@@ -220,7 +281,7 @@ def atualizar_atributos_ativo(ativo_id: int, atributos: Dict[str, str]) -> None:
 
 # ============================================================================  
 # FUNÇÕES DE FILTROS E LISTAS CONTROLADAS
-# ============================================================================
+# ============================================================================  
 
 def obter_valores_distintos_locais() -> Dict[str, List[str]]:
     """
@@ -279,7 +340,7 @@ def obter_valores_distintos_ativos() -> Dict[str, List[str]]:
 
 # ============================================================================  
 # FUNÇÕES PARA CONTRATOS DE LOCAÇÃO
-# ============================================================================
+# ============================================================================  
 
 def buscar_contratos_locacao(filtros: Optional[Dict[str, Any]] = None) -> List[sqlite3.Row]:
     """
@@ -363,7 +424,7 @@ def obter_contratos_do_ativo(ativo_id: int) -> List[sqlite3.Row]:
 
 # ============================================================================  
 # FUNÇÕES PARA SOLICITAÇÕES
-# ============================================================================
+# ============================================================================  
 
 def criar_solicitacao(dados: Dict[str, Any]) -> int:
     """
@@ -430,7 +491,7 @@ def buscar_solicitacoes(filtros: Optional[Dict[str, Any]] = None) -> List[sqlite
 
 # ============================================================================  
 # FUNÇÕES AUXILIARES
-# ============================================================================
+# ============================================================================  
 
 def contar_ativos() -> int:
     """Retorna o total de ativos"""
@@ -445,3 +506,10 @@ def contar_ativos_por_status() -> List[sqlite3.Row]:
         cursor = conn.cursor()
         cursor.execute("SELECT status, COUNT(*) as total FROM ativos GROUP BY status")
         return cursor.fetchall()
+
+# ============================================================================  
+# INICIALIZAÇÃO
+# ============================================================================  
+
+# Cria usuário administrador inicial ao importar o módulo
+criar_usuario_inicial()

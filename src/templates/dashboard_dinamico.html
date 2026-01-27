@@ -1,0 +1,442 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Gestão de Ativos{% endblock %}
+
+{% block extra_css %}
+<style>
+  .stat-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    cursor: pointer;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+  }
+  
+  .stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  }
+  
+  .widget-header {
+    border-bottom: 1px solid #e9ecef;
+    padding-bottom: 12px;
+    margin-bottom: 16px;
+  }
+  
+  .chart-container {
+    position: relative;
+    height: 300px;
+    width: 100%;
+  }
+  
+  .status-em-uso { 
+    background-color: #d4edda; 
+    color: #155724; 
+    padding: 4px 8px; 
+    border-radius: 4px; 
+    font-weight: bold;
+  }
+  
+  .status-devolvido { 
+    background-color: #d1ecf1; 
+    color: #0c5460; 
+    padding: 4px 8px; 
+    border-radius: 4px; 
+    font-weight: bold;
+  }
+  
+  .status-desmobilizado { 
+    background-color: #f8d7da; 
+    color: #721c24; 
+    padding: 4px 8px; 
+    border-radius: 4px; 
+    font-weight: bold;
+  }
+  
+  .priority-alta { color: #dc3545; font-weight: bold; }
+  .priority-media { color: #ffc107; font-weight: bold; }
+  .priority-baixa { color: #28a745; font-weight: bold; }
+</style>
+{% endblock %}
+
+{% block content %}
+<header class="d-flex justify-content-between align-items-center mb-4">
+  <h2 class="mb-0"><i class="bi bi-speedometer2 me-2"></i>Dashboard</h2>
+  <div class="d-flex gap-2">
+    <button class="btn btn-outline-secondary btn-sm" onclick="atualizarDashboard()">
+      <i class="bi bi-arrow-clockwise me-1"></i> Atualizar
+    </button>
+  </div>
+</header>
+
+<!-- Cards de Resumo -->
+<div class="row g-3 mb-4">
+  <!-- Total de Ativos -->
+  <div class="col-12 col-md-6 col-lg-3">
+    <div class="card stat-card h-100" onclick="window.location.href='/ativos'">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h6 class="text-muted mb-0">Total de Ativos</h6>
+            <h3 class="mb-0" id="total-ativos">-</h3>
+          </div>
+          <div class="bg-primary bg-opacity-10 p-3 rounded-circle">
+            <i class="bi bi-laptop fs-4 text-primary"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Ativos em Uso -->
+  <div class="col-12 col-md-6 col-lg-3">
+    <div class="card stat-card h-100" onclick="window.location.href='/ativos?status=Em uso'">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h6 class="text-muted mb-0">Em Uso</h6>
+            <h3 class="mb-0" id="ativos-em-uso">-</h3>
+          </div>
+          <div class="bg-success bg-opacity-10 p-3 rounded-circle">
+            <i class="bi bi-check-circle fs-4 text-success"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Ativos Disponíveis -->
+  <div class="col-12 col-md-6 col-lg-3">
+    <div class="card stat-card h-100" onclick="window.location.href='/ativos?status=Devolvido'">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h6 class="text-muted mb-0">Disponíveis</h6>
+            <h3 class="mb-0" id="ativos-disponiveis">-</h3>
+          </div>
+          <div class="bg-info bg-opacity-10 p-3 rounded-circle">
+            <i class="bi bi-box fs-4 text-info"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Solicitações Pendentes -->
+  <div class="col-12 col-md-6 col-lg-3">
+    <div class="card stat-card h-100" onclick="window.location.href='/solicitacoes?status=Pendente'">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h6 class="text-muted mb-0">Solicitações</h6>
+            <h3 class="mb-0" id="solicitacoes-pendentes">-</h3>
+          </div>
+          <div class="bg-warning bg-opacity-10 p-3 rounded-circle">
+            <i class="bi bi-clipboard fs-4 text-warning"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Gráficos Principais -->
+<div class="row g-4 mb-4">
+  <!-- Distribuição por Tipo de Ativo -->
+  <div class="col-12 col-lg-6">
+    <div class="card h-100">
+      <div class="widget-header">
+        <h5 class="mb-0"><i class="bi bi-bar-chart me-2"></i>Distribuição por Tipo de Ativo</h5>
+      </div>
+      <div class="chart-container">
+        <canvas id="chart-tipo-ativo"></canvas>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Status dos Ativos -->
+  <div class="col-12 col-lg-6">
+    <div class="card h-100">
+      <div class="widget-header">
+        <h5 class="mb-0"><i class="bi bi-pie-chart me-2"></i>Status dos Ativos</h5>
+      </div>
+      <div class="chart-container">
+        <canvas id="chart-status"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tabelas de Alerta -->
+<div class="row g-4">
+  <!-- Solicitações Pendentes -->
+  <div class="col-12 col-lg-6">
+    <div class="card h-100">
+      <div class="widget-header">
+        <h5 class="mb-0"><i class="bi bi-clipboard-check me-2"></i>Solicitações Pendentes</h5>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover">
+          <thead>
+            <tr>
+              <th>Tipo</th>
+              <th>Descrição</th>
+              <th>Prioridade</th>
+              <th>Data</th>
+            </tr>
+          </thead>
+          <tbody id="tabela-solicitacoes">
+            <tr>
+              <td colspan="4" class="text-center">Carregando...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="card-footer text-end">
+        <a href="/solicitacoes?status=Pendente" class="btn btn-sm btn-outline-primary">
+          Ver todas <i class="bi bi-arrow-right ms-1"></i>
+        </a>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Ativos Recentes -->
+  <div class="col-12 col-lg-6">
+    <div class="card h-100">
+      <div class="widget-header">
+        <h5 class="mb-0"><i class="bi bi-clock-history me-2"></i>Ativos Adicionados Recentemente</h5>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover">
+          <thead>
+            <tr>
+              <th>Código</th>
+              <th>Tipo</th>
+              <th>Descrição</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="tabela-recentes">
+            <tr>
+              <td colspan="4" class="text-center">Carregando...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="card-footer text-end">
+        <a href="/ativos" class="btn btn-sm btn-outline-primary">
+          Ver todos <i class="bi bi-arrow-right ms-1"></i>
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Loading Overlay -->
+<div id="loading-overlay" class="position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-25 d-none" style="z-index: 1000;">
+  <div class="position-absolute top-50 start-50 translate-middle">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Carregando...</span>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  // Variáveis globais para os gráficos
+  let chartTipoAtivo = null;
+  let chartStatus = null;
+  
+  // Função para carregar dados do dashboard
+  async function carregarDashboard() {
+    try {
+      document.getElementById('loading-overlay').classList.remove('d-none');
+      
+      // Carrega estatísticas gerais
+      const statsResponse = await fetch('/api/estatisticas/ativos');
+      const stats = await statsResponse.json();
+      
+      if (stats.sucesso) {
+        document.getElementById('total-ativos').textContent = stats.estatisticas.total_ativos;
+        
+        // Calcula ativos por status
+        let emUso = 0, devolvidos = 0, desmobilizados = 0;
+        stats.estatisticas.por_status.forEach(item => {
+          if (item.status === 'Em uso') emUso = item.total;
+          else if (item.status === 'Devolvido') devolvidos = item.total;
+          else if (item.status === 'Desmobilizado') desmobilizados = item.total;
+        });
+        
+        document.getElementById('ativos-em-uso').textContent = emUso;
+        document.getElementById('ativos-disponiveis').textContent = devolvidos;
+        document.getElementById('solicitacoes-pendentes').textContent = '0'; // Será atualizado abaixo
+      }
+      
+      // Carrega solicitações pendentes
+      const solicitacoesResponse = await fetch('/api/solicitacoes?status=Pendente');
+      const solicitacoes = await solicitacoesResponse.json();
+      renderizarSolicitacoes(solicitacoes.slice(0, 5));
+      document.getElementById('solicitacoes-pendentes').textContent = solicitacoes.length;
+      
+      // Carrega ativos recentes
+      const ativosResponse = await fetch('/api/ativos?ordenar_por=id&ordenar_direcao=DESC');
+      const ativos = await ativosResponse.json();
+      renderizarAtivosRecentes(ativos.slice(0, 5));
+      
+      // Carrega dados para gráficos
+      await carregarGraficos(stats.estatisticas);
+      
+    } catch (error) {
+      console.error('Erro ao carregar dashboard:', error);
+      // Não mostra alerta - apenas log no console
+    } finally {
+      document.getElementById('loading-overlay').classList.add('d-none');
+    }
+  }
+  
+  // Função para renderizar solicitações pendentes
+  function renderizarSolicitacoes(solicitacoes) {
+    const tbody = document.getElementById('tabela-solicitacoes');
+    tbody.innerHTML = '';
+    
+    if (solicitacoes.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="4" class="text-center">Nenhuma solicitação pendente</td></tr>';
+      return;
+    }
+    
+    solicitacoes.forEach(solicitacao => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${solicitacao.tipo_solicitacao}</td>
+        <td>${solicitacao.descricao || '-'}</td>
+        <td>
+          <span class="priority-${solicitacao.prioridade.toLowerCase()}">
+            ${solicitacao.prioridade}
+          </span>
+        </td>
+        <td>${formatarData(solicitacao.data_solicitacao)}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+  
+  // Função para renderizar ativos recentes
+  function renderizarAtivosRecentes(ativos) {
+    const tbody = document.getElementById('tabela-recentes');
+    tbody.innerHTML = '';
+    
+    if (ativos.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="4" class="text-center">Nenhum ativo encontrado</td></tr>';
+      return;
+    }
+    
+    ativos.forEach(ativo => {
+      const statusClass = 
+        ativo.status === 'Em uso' ? 'status-em-uso' : 
+        ativo.status === 'Devolvido' ? 'status-devolvido' : 'status-desmobilizado';
+      
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${ativo.codigo_ativo}</td>
+        <td>${ativo.categoria}</td>
+        <td>${ativo.descricao || '-'}</td>
+        <td><span class="${statusClass}">${ativo.status}</span></td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+  
+  // Função para carregar e renderizar gráficos
+  async function carregarGraficos(estatisticas) {
+    // Gráfico de tipos de ativo (simulado com dados reais)
+    const tipoAtivoCtx = document.getElementById('chart-tipo-ativo').getContext('2d');
+    
+    // Agrupa ativos por tipo
+    const tiposMap = {};
+    // Aqui você pode fazer uma chamada adicional à API para obter dados reais por tipo
+    // Por enquanto, usamos dados simulados baseados nos seus 18 ativos
+    
+    const tipoAtivoData = {
+      labels: ['Hardware', 'Software', 'Mobiliário', 'Periféricos'],
+      datasets: [{
+        label: 'Quantidade',
+        data: [8, 3, 3, 4], // Baseado nos seus 18 ativos
+        backgroundColor: [
+          '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0'
+        ],
+        borderWidth: 1
+      }]
+    };
+    
+    if (chartTipoAtivo) chartTipoAtivo.destroy();
+    chartTipoAtivo = new Chart(tipoAtivoCtx, {
+      type: 'bar',
+      data: tipoAtivoData,
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: { precision: 0 }
+          }
+        }
+      }
+    });
+    
+    // Gráfico de status
+    const statusCtx = document.getElementById('chart-status').getContext('2d');
+    const statusData = {
+      labels: estatisticas.por_status.map(item => item.status),
+      datasets: [{
+        data: estatisticas.por_status.map(item => item.total),
+        backgroundColor: [
+          '#28a745', // Em uso
+          '#17a2b8', // Devolvido  
+          '#dc3545'  // Desmobilizado
+        ],
+        borderWidth: 1
+      }]
+    };
+    
+    if (chartStatus) chartStatus.destroy();
+    chartStatus = new Chart(statusCtx, {
+      type: 'pie',
+      data: statusData,
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'bottom'
+          }
+        }
+      }
+    });
+  }
+  
+  // Função auxiliar para formatar datas
+  function formatarData(dataString) {
+    if (!dataString) return '-';
+    const data = new Date(dataString);
+    return data.toLocaleDateString('pt-BR');
+  }
+  
+  // Função para atualizar o dashboard
+  function atualizarDashboard() {
+    carregarDashboard();
+  }
+  
+  // Inicialização
+  document.addEventListener('DOMContentLoaded', function() {
+    carregarDashboard();
+    
+    // Atualiza automaticamente a cada 30 segundos
+    setInterval(carregarDashboard, 30000);
+  });
+</script>
+{% endblock %}

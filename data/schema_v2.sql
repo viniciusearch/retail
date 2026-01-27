@@ -47,6 +47,7 @@ CREATE TABLE usuarios (
     nome_completo TEXT NOT NULL,
     email TEXT UNIQUE,
     matricula TEXT UNIQUE,
+    senha_hash TEXT,  -- ✅ ADICIONADO: campo para autenticação
     cargo_id INTEGER,
     setor_id INTEGER,
     local_padrao_id INTEGER,
