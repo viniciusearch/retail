@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+
+{% block title %}Login - Gestão de Ativos{% endblock %}
+
+{% block extra_css %}
+<style>
+  .login-container {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  }
+  
+  .login-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    padding: 2rem;
+    width: 100%;
+    max-width: 400px;
+  }
+  
+  .login-header {
+    text-align: center;
+    margin-bottom: 2rem;
+  }
+  
+  .login-header h2 {
+    color: #333;
+    margin-bottom: 0.5rem;
+  }
+  
+  .login-header p {
+    color: #6c757d;
+    margin-bottom: 0;
+  }
+  
+  .form-control:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+  }
+  
+  .btn-login {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    padding: 0.75rem;
+    font-weight: 600;
+    transition: transform 0.2s ease;
+  }
+  
+  .btn-login:hover {
+    transform: translateY(-2px);
+    background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+  }
+  
+  .forgot-password {
+    text-align: center;
+    margin-top: 1rem;
+  }
+  
+  .forgot-password a {
+    color: #667eea;
+    text-decoration: none;
+    font-size: 0.9rem;
+  }
+  
+  .forgot-password a:hover {
+    text-decoration: underline;
+  }
+  
+  .alert-custom {
+    border-left: 4px solid #667eea;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="login-container">
+  <div class="login-card">
+    <div class="login-header">
+      <h2><i class="bi bi-shield-lock me-2"></i>Gestão de Ativos</h2>
+      <p>Entre com suas credenciais para acessar o sistema</p>
+    </div>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ 'danger' if category == 'error' else 'info' }} alert-custom" role="alert">
+            {{ message }}
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+    
+    <form method="POST" action="{{ url_for('web.login') }}">
+      <div class="mb-3">
+        <label for="email" class="form-label">Email</label>
+        <input type="email" class="form-control" id="email" name="email" required 
+               placeholder="seu.email@empresa.com" autocomplete="email">
+      </div>
+      
+      <div class="mb-3">
+        <label for="password" class="form-label">Senha</label>
+        <input type="password" class="form-control" id="password" name="password" required 
+               placeholder="••••••••" autocomplete="current-password">
+      </div>
+      
+      <button type="submit" class="btn btn-login w-100">
+        <i class="bi bi-box-arrow-in-right me-2"></i>Entrar no Sistema
+      </button>
+    </form>
+    
+    <div class="forgot-password">
+      <a href="#" onclick="alert('Contate o administrador para redefinir sua senha.'); return false;">
+        <i class="bi bi-question-circle me-1"></i>Esqueceu sua senha?
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- Remove o sidebar e footer para página de login -->
+<script>
+  // Remove sidebar e footer na página de login
+  document.querySelector('.sidebar')?.remove();
+  document.querySelector('footer')?.remove();
+  document.querySelector('main')?.classList.remove('flex-grow-1');
+  document.querySelector('main')?.classList.add('w-100');
+</script>
+{% endblock %}
+
+{% block extra_js %}{% endblock %}

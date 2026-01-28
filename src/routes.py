@@ -4,7 +4,7 @@ import csv
 import io
 from datetime import datetime
 from io import StringIO
-from flask import Blueprint, jsonify, request, Response
+from flask import Blueprint, jsonify, request, Response, session, redirect, url_for
 
 # Importe as funções do models atualizado
 from models import (
@@ -24,7 +24,8 @@ from models import (
     criar_solicitacao,
     buscar_solicitacoes,
     contar_ativos,
-    contar_ativos_por_status
+    contar_ativos_por_status,
+    verificar_credenciais  # Adicionar esta importação
 )
 
 api_bp = Blueprint('api', __name__)
@@ -54,6 +55,41 @@ def buscar_ativos_api():
     
     resultados = buscar_ativos(filtros)
     return jsonify([dict(row) for row in resultados])
+
+@api_bp.route('/ativos/<int:ativo_id>', methods=['GET'])
+def obter_ativo(ativo_id):
+    """
+    Retorna um ativo específico com seus relacionamentos
+    """
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            
+            cursor.execute("""
+                SELECT 
+                    a.*,
+                    e.nome as proprietario_nome,
+                    u.nome_completo as usuario_nome,
+                    l.nome as local_nome,
+                    l.ambiente as local_ambiente,
+                    l.predio as local_predio,
+                    l.setor as local_setor
+                FROM ativos a
+                LEFT JOIN empresas e ON a.proprietario_id = e.id
+                LEFT JOIN usuarios u ON a.usuario_atual_id = u.id  
+                LEFT JOIN locais l ON a.local_atual_id = l.id
+                WHERE a.id = ?
+            """, (ativo_id,))
+            
+            ativo = cursor.fetchone()
+            
+            if not ativo:
+                return jsonify({"erro": "Ativo não encontrado"}), 404
+            
+            return jsonify(dict(ativo))
+            
+    except Exception as e:
+        return jsonify({"erro": f"Erro ao buscar ativo: {str(e)}"}), 500
 
 @api_bp.route('/ativos', methods=['POST'])
 def criar_ativo_api():
@@ -284,6 +320,80 @@ def criar_solicitacao_api():
         return jsonify({"erro": f"Erro interno: {str(e)}"}), 500
 
 # ============================================================================  
+# ROTAS DE LISTAS CONTROLADAS (PARA DROPDOWNS)
+# ============================================================================  
+
+@api_bp.route('/locais', methods=['GET'])
+def listar_locais():
+    """
+    Lista todos os locais para uso em dropdowns
+    """
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT id, nome, codigo, ambiente, predio, setor FROM locais ORDER BY nome")
+            locais = cursor.fetchall()
+            return jsonify([dict(row) for row in locais])
+    except Exception as e:
+        return jsonify({"erro": f"Erro ao buscar locais: {str(e)}"}), 500
+
+@api_bp.route('/empresas', methods=['GET'])
+def listar_empresas():
+    """
+    Lista todas as empresas para uso em dropdowns
+    """
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT id, nome, tipo FROM empresas ORDER BY nome")
+            empresas = cursor.fetchall()
+            return jsonify([dict(row) for row in empresas])
+    except Exception as e:
+        return jsonify({"erro": f"Erro ao buscar empresas: {str(e)}"}), 500
+
+@api_bp.route('/usuarios', methods=['GET'])
+def listar_usuarios():
+    """
+    Lista todos os usuários para uso em dropdowns
+    """
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT id, nome_completo, email FROM usuarios WHERE status = 'Ativo' ORDER BY nome_completo")
+            usuarios = cursor.fetchall()
+            return jsonify([dict(row) for row in usuarios])
+    except Exception as e:
+        return jsonify({"erro": f"Erro ao buscar usuários: {str(e)}"}), 500
+
+@api_bp.route('/cargos', methods=['GET'])
+def listar_cargos():
+    """
+    Lista todos os cargos para uso em dropdowns
+    """
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT id, nome FROM cargos ORDER BY nome")
+            cargos = cursor.fetchall()
+            return jsonify([dict(row) for row in cargos])
+    except Exception as e:
+        return jsonify({"erro": f"Erro ao buscar cargos: {str(e)}"}), 500
+
+@api_bp.route('/setores', methods=['GET'])
+def listar_setores():
+    """
+    Lista todos os setores para uso em dropdowns
+    """
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT id, nome FROM setores ORDER BY nome")
+            setores = cursor.fetchall()
+            return jsonify([dict(row) for row in setores])
+    except Exception as e:
+        return jsonify({"erro": f"Erro ao buscar setores: {str(e)}"}), 500
+
+# ============================================================================  
 # ROTAS DE FILTROS E LISTAS CONTROLADAS
 # ============================================================================  
 
@@ -439,3 +549,170 @@ def health_check():
             'erro': str(e),
             'timestamp': datetime.now().isoformat()
         }), 500
+
+# ============================================================================  
+# ROTA DE UPLOAD EM LOTE
+# ============================================================================  
+
+@api_bp.route('/ativos/lote', methods=['POST'])
+def processar_lote_ativos():
+    """Processa upload em lote de ativos"""
+    if 'file' not in request.files:
+        return jsonify({"erro": "Nenhum arquivo enviado"}), 400
+    
+    arquivo = request.files['file']
+    if arquivo.filename == '':
+        return jsonify({"erro": "Arquivo sem nome"}), 400
+    
+    if not arquivo.filename.endswith('.csv'):
+        return jsonify({"erro": "Apenas arquivos CSV são permitidos"}), 400
+    
+    try:
+        stream = io.StringIO(arquivo.stream.read().decode("UTF-8-sig"))
+        csv_input = csv.DictReader(stream)
+        
+        if 'codigo_ativo' not in csv_input.fieldnames:
+            return jsonify({"erro": "Coluna 'codigo_ativo' obrigatória no CSV"}), 400
+        
+        resultados = {"sucesso": 0, "erros": [], "detalhes": []}
+        
+        for linha_num, linha in enumerate(csv_input, start=2):
+            try:
+                codigo_ativo = linha.get('codigo_ativo', '').strip()
+                if not codigo_ativo:
+                    resultados["erros"].append(f"Linha {linha_num}: Código de ativo obrigatório")
+                    continue
+                
+                # Prepara dados para criação
+                dados = {
+                    'codigo_ativo': codigo_ativo,
+                    'tipo_ativo': linha.get('tipo_ativo', '').strip(),
+                    'categoria': linha.get('categoria', '').strip(),
+                    'descricao': linha.get('descricao', '').strip() or None,
+                    'status': linha.get('status', 'Em uso').strip(),
+                    'projeto': linha.get('projeto', '').strip() or None,
+                    'data_aquisicao': linha.get('data_aquisicao', '').strip() or None,
+                    'observacoes': linha.get('observacoes', '').strip() or None
+                }
+                
+                # Valida campos obrigatórios
+                campos_obrigatorios = ['tipo_ativo', 'categoria', 'status']
+                for campo in campos_obrigatorios:
+                    if not dados[campo]:
+                        raise ValueError(f"Campo obrigatório '{campo}' não informado")
+                
+                # Busca IDs para relacionamentos
+                with get_db_connection() as conn:
+                    cursor = conn.cursor()
+                    
+                    # Proprietário
+                    proprietario_nome = linha.get('proprietario_nome', '').strip()
+                    if proprietario_nome:
+                        cursor.execute("SELECT id FROM empresas WHERE nome = ?", (proprietario_nome,))
+                        proprietario = cursor.fetchone()
+                        if proprietario:
+                            dados['proprietario_id'] = proprietario[0]
+                        else:
+                            raise ValueError(f"Proprietário '{proprietario_nome}' não encontrado")
+                    else:
+                        # Usa empresa proprietária padrão
+                        cursor.execute("SELECT id FROM empresas WHERE tipo = 'propria' LIMIT 1")
+                        proprietario = cursor.fetchone()
+                        dados['proprietario_id'] = proprietario[0] if proprietario else 1
+                    
+                    # Local
+                    local_nome = linha.get('local_nome', '').strip()
+                    if local_nome:
+                        cursor.execute("SELECT id FROM locais WHERE nome = ?", (local_nome,))
+                        local = cursor.fetchone()
+                        if local:
+                            dados['local_atual_id'] = local[0]
+                        else:
+                            raise ValueError(f"Local '{local_nome}' não encontrado")
+                    else:
+                        raise ValueError("Local obrigatório")
+                    
+                    # Usuário (opcional)
+                    usuario_nome = linha.get('usuario_nome', '').strip()
+                    if usuario_nome:
+                        cursor.execute("SELECT id FROM usuarios WHERE nome_completo = ?", (usuario_nome,))
+                        usuario = cursor.fetchone()
+                        if usuario:
+                            dados['usuario_atual_id'] = usuario[0]
+                    
+                    # Remove campos de texto que foram convertidos para IDs
+                    dados.pop('proprietario_nome', None)
+                    dados.pop('local_nome', None)
+                    dados.pop('usuario_nome', None)
+                
+                # Cria o ativo
+                ativo_id = criar_ativo(dados)
+                resultados["sucesso"] += 1
+                resultados["detalhes"].append(f"Criado: {codigo_ativo}")
+                
+                # Processa atributos específicos
+                atributos = {}
+                campos_atributos = ['numero_serie', 'host_name', 'teamviewer_id', 'imei', 'chip', 
+                                  'chave_licenca', 'versao', 'data_expiracao', 'tipo_licenca', 
+                                  'polegadas', 'resolucao', 'ip_impressora', 'toner_preto', 'toner_cores']
+                
+                for campo in campos_atributos:
+                    valor = linha.get(campo, '').strip()
+                    if valor:
+                        atributos[campo] = valor
+                
+                if atributos:
+                    atualizar_atributos_ativo(ativo_id, atributos)
+                
+            except Exception as e:
+                resultados["erros"].append(f"Linha {linha_num} ({codigo_ativo}): {str(e)}")
+        
+        return jsonify({
+            "mensagem": f"Upload concluído: {resultados['sucesso']} ativos criados com sucesso",
+            "resultados": resultados
+        }), 200
+        
+    except UnicodeDecodeError:
+        return jsonify({"erro": "Erro ao ler arquivo CSV. Use codificação UTF-8"}), 400
+    except Exception as e:
+        return jsonify({"erro": f"Erro ao processar: {str(e)}"}), 500
+
+# ============================================================================  
+# ROTAS DE AUTENTICAÇÃO
+# ============================================================================  
+
+@api_bp.route('/login', methods=['POST'])
+def login_api():
+    """
+    Autentica usuário e retorna informações do perfil
+    """
+    dados = request.get_json()
+    if not dados or not dados.get('email') or not dados.get('password'):
+        return jsonify({"erro": "Email e senha são obrigatórios"}), 400
+    
+    email = dados['email']
+    password = dados['password']
+    
+    try:
+        usuario = verificar_credenciais(email, password)
+        if usuario:
+            return jsonify({
+                "sucesso": True,
+                "usuario": {
+                    "id": usuario['id'],
+                    "nome": usuario['nome_completo'],
+                    "email": usuario['email'],
+                    "perfil": usuario['perfil']
+                }
+            }), 200
+        else:
+            return jsonify({"erro": "Email ou senha inválidos"}), 401
+    except Exception as e:
+        return jsonify({"erro": f"Erro na autenticação: {str(e)}"}), 500
+
+@api_bp.route('/logout', methods=['POST'])
+def logout_api():
+    """
+    Encerra sessão do usuário
+    """
+    return jsonify({"sucesso": True, "mensagem": "Logout realizado com sucesso"}), 200

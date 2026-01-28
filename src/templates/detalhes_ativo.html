@@ -1,0 +1,818 @@
+{% extends "base.html" %}
+
+{% block title %}Detalhes do Ativo - Gestão de Ativos{% endblock %}
+
+{% block extra_css %}
+<style>
+  .detail-card {
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    margin-bottom: 20px;
+  }
+  
+  .detail-header {
+    background-color: #f8f9fa;
+    padding: 12px 16px;
+    border-bottom: 1px solid #dee2e6;
+    border-radius: 8px 8px 0 0;
+  }
+  
+  .detail-body {
+    padding: 16px;
+  }
+  
+  .detail-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid #e9ecef;
+  }
+  
+  .detail-row:last-child {
+    border-bottom: none;
+  }
+  
+  .detail-label {
+    font-weight: 600;
+    color: #495057;
+    min-width: 180px;
+  }
+  
+  .detail-value {
+    color: #212529;
+    flex: 1;
+    text-align: right;
+  }
+  
+  .status-em-uso { 
+    background-color: #d4edda; 
+    color: #155724; 
+    padding: 2px 6px; 
+    border-radius: 4px; 
+    font-weight: bold;
+  }
+  
+  .status-devolvido { 
+    background-color: #d1ecf1; 
+    color: #0c5460; 
+    padding: 2px 6px; 
+    border-radius: 4px; 
+    font-weight: bold;
+  }
+  
+  .status-desmobilizado { 
+    background-color: #f8d7da; 
+    color: #721c24; 
+    padding: 2px 6px; 
+    border-radius: 4px; 
+    font-weight: bold;
+  }
+  
+  .edit-section {
+    display: none;
+  }
+  
+  .btn-toggle-edit {
+    margin-right: 10px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<header class="d-flex justify-content-between align-items-center mb-4">
+  <h2 class="mb-0"><i class="bi bi-info-circle me-2"></i>Detalhes do Ativo</h2>
+  <div class="d-flex gap-2">
+    <button class="btn btn-outline-secondary btn-sm" onclick="window.history.back()">
+      <i class="bi bi-arrow-left me-1"></i> Voltar
+    </button>
+    <button class="btn btn-primary btn-sm" id="btn-toggle-edit">
+      <i class="bi bi-pencil me-1"></i> Editar Ativo
+    </button>
+  </div>
+</header>
+
+<!-- Informações Básicas -->
+<div class="detail-card">
+  <div class="detail-header">
+    <h5 class="mb-0"><i class="bi bi-laptop me-2"></i>Informações Básicas</h5>
+  </div>
+  <div class="detail-body" id="info-basica-view">
+    <div class="detail-row">
+      <span class="detail-label">Código do Ativo:</span>
+      <span class="detail-value" id="view-codigo_ativo">-</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Tipo de Ativo:</span>
+      <span class="detail-value" id="view-tipo_ativo">-</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Categoria:</span>
+      <span class="detail-value" id="view-categoria">-</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Descrição:</span>
+      <span class="detail-value" id="view-descricao">-</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Status:</span>
+      <span class="detail-value">
+        <span id="view-status" class=""></span>
+      </span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Projeto:</span>
+      <span class="detail-value" id="view-projeto">-</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Data de Aquisição:</span>
+      <span class="detail-value" id="view-data_aquisicao">-</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Observações:</span>
+      <span class="detail-value" id="view-observacoes">-</span>
+    </div>
+  </div>
+  
+  <div class="detail-body edit-section" id="info-basica-edit">
+    <form id="form-edit-basico">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label">Código do Ativo</label>
+          <input type="text" class="form-control" id="edit-codigo_ativo" required>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Tipo de Ativo</label>
+          <select class="form-select" id="edit-tipo_ativo" required disabled>
+            <option value="hardware">Hardware</option>
+            <option value="periferico">Periférico</option>
+            <option value="software">Software</option>
+            <option value="mobiliario">Mobiliário</option>
+            <option value="rede">Rede</option>
+            <option value="servico">Serviço</option>
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Categoria</label>
+          <select class="form-select" id="edit-categoria" required>
+            <!-- Será preenchido dinamicamente -->
+          </select>
+        </div>
+        <div class="col-12">
+          <label class="form-label">Descrição</label>
+          <input type="text" class="form-control" id="edit-descricao">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Status</label>
+          <select class="form-select" id="edit-status" required>
+            <option value="Em uso">Em uso</option>
+            <option value="Devolvido">Devolvido</option>
+            <option value="Desmobilizado">Desmobilizado</option>
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Projeto</label>
+          <input type="text" class="form-control" id="edit-projeto">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Data de Aquisição</label>
+          <input type="date" class="form-control" id="edit-data_aquisicao">
+        </div>
+        <div class="col-12">
+          <label class="form-label">Observações</label>
+          <textarea class="form-control" id="edit-observacoes" rows="2"></textarea>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Relacionamentos -->
+<div class="detail-card">
+  <div class="detail-header">
+    <h5 class="mb-0"><i class="bi bi-link-45deg me-2"></i>Relacionamentos</h5>
+  </div>
+  <div class="detail-body" id="relacionamentos-view">
+    <div class="detail-row">
+      <span class="detail-label">Proprietário:</span>
+      <span class="detail-value" id="view-proprietario">-</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Usuário Atual:</span>
+      <span class="detail-value" id="view-usuario_atual">-</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Local Atual:</span>
+      <span class="detail-value" id="view-local_atual">-</span>
+    </div>
+  </div>
+  
+  <div class="detail-body edit-section" id="relacionamentos-edit">
+    <form id="form-edit-relacionamentos">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label">Proprietário</label>
+          <select class="form-select" id="edit-proprietario_id" required>
+            <option value="">Carregando...</option>
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Local Atual</label>
+          <select class="form-select" id="edit-local_atual_id" required>
+            <option value="">Carregando...</option>
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Usuário Atual</label>
+          <select class="form-select" id="edit-usuario_atual_id">
+            <option value="">Disponível</option>
+            <option value="">Carregando...</option>
+          </select>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Atributos Específicos -->
+<div class="detail-card" id="atributos-section">
+  <div class="detail-header">
+    <h5 class="mb-0"><i class="bi bi-gear me-2"></i>Atributos Específicos</h5>
+  </div>
+  <div class="detail-body" id="atributos-view">
+    <div class="text-center py-3 text-muted" id="atributos-placeholder">
+      Carregando atributos específicos...
+    </div>
+  </div>
+  
+  <div class="detail-body edit-section" id="atributos-edit">
+    <form id="form-edit-atributos">
+      <div id="atributos-edit-container">
+        <!-- Será preenchido dinamicamente -->
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Contratos de Locação -->
+<div class="detail-card" id="contratos-section">
+  <div class="detail-header">
+    <h5 class="mb-0"><i class="bi bi-file-contract me-2"></i>Contratos de Locação</h5>
+  </div>
+  <div class="detail-body" id="contratos-view">
+    <div id="contratos-lista">
+      <div class="text-center py-3 text-muted" id="contratos-placeholder">
+        Verificando contratos...
+      </div>
+    </div>
+  </div>
+  
+  <div class="detail-body edit-section" id="contratos-edit">
+    <form id="form-edit-contratos">
+      <div class="mb-3">
+        <label class="form-label">Vincular a Contrato</label>
+        <select class="form-select" id="edit-contrato_id">
+          <option value="">Nenhum contrato</option>
+          <option value="">Carregando...</option>
+        </select>
+      </div>
+      <button type="button" class="btn btn-success" id="btn-vincular-contrato">
+        <i class="bi bi-link me-1"></i> Vincular ao Contrato
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- Botões de Ação -->
+<div class="d-flex justify-content-end gap-2 mt-4 edit-section" id="botoes-edit">
+  <button class="btn btn-secondary" id="btn-cancelar-edit">
+    <i class="bi bi-x-circle me-1"></i> Cancelar
+  </button>
+  <button class="btn btn-primary" id="btn-salvar-edit">
+    <i class="bi bi-check-circle me-1"></i> Salvar Alterações
+  </button>
+</div>
+
+<!-- Loading Overlay -->
+<div id="loading-overlay" class="position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-25 d-none" style="z-index: 1000;">
+  <div class="position-absolute top-50 start-50 translate-middle">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Carregando...</span>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de Confirmação -->
+<div class="modal fade" id="modalConfirmacao" tabindex="-1" aria-labelledby="modalConfirmacaoLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalConfirmacaoLabel">Confirmar Alterações</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        Tem certeza que deseja salvar as alterações neste ativo?
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="btn-confirmar-salvar">Confirmar</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Mapeamento de categorias por tipo de ativo
+  const categoriasPorTipo = {
+    'hardware': ['Notebook', 'Desktop', 'Tablet', 'Smartphone', 'Servidor'],
+    'periferico': ['Monitor', 'Teclado', 'Mouse', 'Webcam', 'Headset', 'Impressora', 'Plotter'],
+    'rede': ['Roteador', 'Switch', 'Access Point', 'Antena Wi-Fi'],
+    'software': ['AutoCAD', 'Office', 'Windows', 'Adobe', 'Outro Software'],
+    'mobiliario': ['Cadeira', 'Mesa', 'Arquivo', 'Organizador', 'Armário'],
+    'servico': ['Locação', 'Manutenção', 'Suporte']
+  };
+  
+  // Atributos específicos por categoria
+  const atributosPorCategoria = {
+    'Notebook': [
+      { campo: 'numero_serie', label: 'Número de Série', tipo: 'text' },
+      { campo: 'host_name', label: 'Nome do Host', tipo: 'text' },
+      { campo: 'teamviewer_id', label: 'TeamViewer ID', tipo: 'text' }
+    ],
+    'Desktop': [
+      { campo: 'numero_serie', label: 'Número de Série', tipo: 'text' },
+      { campo: 'host_name', label: 'Nome do Host', tipo: 'text' },
+      { campo: 'teamviewer_id', label: 'TeamViewer ID', tipo: 'text' }
+    ],
+    'Tablet': [
+      { campo: 'numero_serie', label: 'Número de Série', tipo: 'text' },
+      { campo: 'imei', label: 'IMEI', tipo: 'text' },
+      { campo: 'chip', label: 'Chip', tipo: 'text' }
+    ],
+    'Smartphone': [
+      { campo: 'numero_serie', label: 'Número de Série', tipo: 'text' },
+      { campo: 'imei', label: 'IMEI', tipo: 'text' },
+      { campo: 'chip', label: 'Chip', tipo: 'text' }
+    ],
+    'Monitor': [
+      { campo: 'numero_serie', label: 'Número de Série', tipo: 'text' },
+      { campo: 'polegadas', label: 'Polegadas', tipo: 'number' },
+      { campo: 'resolucao', label: 'Resolução', tipo: 'text' }
+    ],
+    'Impressora': [
+      { campo: 'numero_serie', label: 'Número de Série', tipo: 'text' },
+      { campo: 'ip_impressora', label: 'IP da Impressora', tipo: 'text' },
+      { campo: 'toner_preto', label: 'Toner Preto (%)', tipo: 'number' },
+      { campo: 'toner_cores', label: 'Toner Cores (%)', tipo: 'number' }
+    ],
+    'AutoCAD': [
+      { campo: 'chave_licenca', label: 'Chave de Licença', tipo: 'text' },
+      { campo: 'versao', label: 'Versão', tipo: 'text' },
+      { campo: 'data_expiracao', label: 'Data de Expiração', tipo: 'date' },
+      { campo: 'tipo_licenca', label: 'Tipo de Licença', tipo: 'select', opcoes: ['Perpétua', 'Anual', 'Por Usuário', 'Flutuante'] }
+    ],
+    'Revit': [
+      { campo: 'chave_licenca', label: 'Chave de Licença', tipo: 'text' },
+      { campo: 'versao', label: 'Versão', tipo: 'text' },
+      { campo: 'data_expiracao', label: 'Data de Expiração', tipo: 'date' },
+      { campo: 'tipo_licenca', label: 'Tipo de Licença', tipo: 'select', opcoes: ['Perpétua', 'Anual', 'Por Usuário', 'Flutuante'] }
+    ]
+  };
+  
+  let ativoId = {{ ativo_id }};
+  let ativoData = null;
+  let atributosData = {};
+  let contratosData = [];
+  
+  // Função para carregar dados do ativo
+  async function carregarAtivo() {
+    try {
+      document.getElementById('loading-overlay').classList.remove('d-none');
+      
+      const response = await fetch(`/api/ativos/${ativoId}`);
+      if (!response.ok) throw new Error('Ativo não encontrado');
+      
+      ativoData = await response.json();
+      exibirDadosAtivo();
+      
+      // Carrega atributos específicos
+      await carregarAtributos();
+      
+      // Carrega contratos
+      await carregarContratos();
+      
+      // Preenche dropdowns
+      await carregarDropdowns();
+      
+    } catch (error) {
+      console.error('Erro ao carregar ativo:', error);
+      alert('Erro ao carregar os dados do ativo.');
+      window.history.back();
+    } finally {
+      document.getElementById('loading-overlay').classList.add('d-none');
+    }
+  }
+  
+  // Função para carregar atributos específicos
+  async function carregarAtributos() {
+    try {
+      const response = await fetch(`/api/ativos/${ativoId}/atributos`);
+      atributosData = await response.json();
+      exibirAtributos();
+    } catch (error) {
+      console.error('Erro ao carregar atributos:', error);
+      document.getElementById('atributos-placeholder').textContent = 'Sem atributos específicos';
+    }
+  }
+  
+  // Função para carregar contratos
+  async function carregarContratos() {
+    try {
+      const response = await fetch(`/api/ativos/${ativoId}/contratos`);
+      contratosData = await response.json();
+      exibirContratos();
+    } catch (error) {
+      console.error('Erro ao carregar contratos:', error);
+      document.getElementById('contratos-placeholder').textContent = 'Sem contratos vinculados';
+    }
+  }
+  
+  // Função para carregar dropdowns
+  async function carregarDropdowns() {
+    try {
+      // Empresas
+      const empresasResponse = await fetch('/api/empresas');
+      const empresas = await empresasResponse.json();
+      const proprietarioSelect = document.getElementById('edit-proprietario_id');
+      proprietarioSelect.innerHTML = '<option value="">Selecione</option>';
+      empresas.forEach(empresa => {
+        const option = document.createElement('option');
+        option.value = empresa.id;
+        option.textContent = empresa.nome;
+        proprietarioSelect.appendChild(option);
+      });
+      
+      // Locais
+      const locaisResponse = await fetch('/api/locais');
+      const locais = await locaisResponse.json();
+      const localSelect = document.getElementById('edit-local_atual_id');
+      localSelect.innerHTML = '<option value="">Selecione</option>';
+      locais.forEach(local => {
+        const option = document.createElement('option');
+        option.value = local.id;
+        option.textContent = local.nome;
+        localSelect.appendChild(option);
+      });
+      
+      // Usuários
+      const usuariosResponse = await fetch('/api/usuarios');
+      const usuarios = await usuariosResponse.json();
+      const usuarioSelect = document.getElementById('edit-usuario_atual_id');
+      usuarioSelect.innerHTML = '<option value="">Disponível</option>';
+      usuarios.forEach(usuario => {
+        const option = document.createElement('option');
+        option.value = usuario.id;
+        option.textContent = usuario.nome_completo;
+        usuarioSelect.appendChild(option);
+      });
+      
+      // Contratos disponíveis
+      const contratosResponse = await fetch('/api/contratos-locacao?status=Ativo');
+      const contratos = await contratosResponse.json();
+      const contratoSelect = document.getElementById('edit-contrato_id');
+      contratoSelect.innerHTML = '<option value="">Nenhum contrato</option>';
+      contratos.forEach(contrato => {
+        const option = document.createElement('option');
+        option.value = contrato.id;
+        option.textContent = `${contrato.numero_contrato} - ${contrato.fornecedor_nome}`;
+        contratoSelect.appendChild(option);
+      });
+      
+    } catch (error) {
+      console.error('Erro ao carregar dropdowns:', error);
+    }
+  }
+  
+  // Função para exibir dados do ativo
+  function exibirDadosAtivo() {
+    // Informações básicas
+    document.getElementById('view-codigo_ativo').textContent = ativoData.codigo_ativo;
+    document.getElementById('view-tipo_ativo').textContent = ativoData.tipo_ativo;
+    document.getElementById('view-categoria').textContent = ativoData.categoria;
+    document.getElementById('view-descricao').textContent = ativoData.descricao || '-';
+    document.getElementById('view-projeto').textContent = ativoData.projeto || '-';
+    document.getElementById('view-data_aquisicao').textContent = ativoData.data_aquisicao || '-';
+    document.getElementById('view-observacoes').textContent = ativoData.observacoes || '-';
+    
+    // Status com formatação
+    const statusSpan = document.getElementById('view-status');
+    statusSpan.textContent = ativoData.status;
+    statusSpan.className = ativoData.status === 'Em uso' ? 'status-em-uso' : 
+                         ativoData.status === 'Devolvido' ? 'status-devolvido' : 'status-desmobilizado';
+    
+    // Relacionamentos
+    document.getElementById('view-proprietario').textContent = ativoData.proprietario_nome || '-';
+    document.getElementById('view-usuario_atual').textContent = ativoData.usuario_nome || 'Disponível';
+    document.getElementById('view-local_atual').textContent = ativoData.local_nome || '-';
+    
+    // Preenche formulário de edição
+    document.getElementById('edit-codigo_ativo').value = ativoData.codigo_ativo;
+    document.getElementById('edit-tipo_ativo').value = ativoData.tipo_ativo;
+    document.getElementById('edit-categoria').value = ativoData.categoria;
+    document.getElementById('edit-descricao').value = ativoData.descricao || '';
+    document.getElementById('edit-status').value = ativoData.status;
+    document.getElementById('edit-projeto').value = ativoData.projeto || '';
+    document.getElementById('edit-data_aquisicao').value = ativoData.data_aquisicao || '';
+    document.getElementById('edit-observacoes').value = ativoData.observacoes || '';
+    
+    // Relacionamentos no formulário
+    document.getElementById('edit-proprietario_id').value = ativoData.proprietario_id || '';
+    document.getElementById('edit-local_atual_id').value = ativoData.local_atual_id || '';
+    document.getElementById('edit-usuario_atual_id').value = ativoData.usuario_atual_id || '';
+    
+    // Atualiza categorias baseado no tipo
+    atualizarCategorias(ativoData.tipo_ativo);
+  }
+  
+  // Função para exibir atributos
+  function exibirAtributos() {
+    const container = document.getElementById('atributos-view');
+    
+    if (Object.keys(atributosData).length === 0) {
+      container.innerHTML = '<div class="text-center py-3 text-muted">Sem atributos específicos</div>';
+      return;
+    }
+    
+    let html = '<div class="row">';
+    Object.entries(atributosData).forEach(([chave, valor]) => {
+      html += `
+        <div class="col-md-6 mb-2">
+          <strong>${chave.replace(/_/g, ' ').toUpperCase()}:</strong> ${valor}
+        </div>
+      `;
+    });
+    html += '</div>';
+    
+    container.innerHTML = html;
+  }
+  
+  // Função para exibir contratos
+  function exibirContratos() {
+    const container = document.getElementById('contratos-lista');
+    
+    if (contratosData.length === 0) {
+      container.innerHTML = '<div class="text-center py-3 text-muted">Sem contratos vinculados</div>';
+      return;
+    }
+    
+    let html = '<div class="table-responsive"><table class="table table-sm">';
+    html += '<thead><tr><th>Contrato</th><th>Fornecedor</th><th>Status</th><th>Ações</th></tr></thead><tbody>';
+    
+    contratosData.forEach(contrato => {
+      html += `
+        <tr>
+          <td>${contrato.numero_contrato}</td>
+          <td>${contrato.fornecedor_nome}</td>
+          <td>${contrato.status}</td>
+          <td>
+            <button class="btn btn-sm btn-outline-danger" onclick="desvincularContrato(${contrato.id})">
+              <i class="bi bi-unlink"></i>
+            </button>
+          </td>
+        </tr>
+      `;
+    });
+    
+    html += '</tbody></table></div>';
+    container.innerHTML = html;
+  }
+  
+  // Função para atualizar categorias quando tipo muda
+  function atualizarCategorias(tipo) {
+    const categoriaSelect = document.getElementById('edit-categoria');
+    categoriaSelect.innerHTML = '<option value="">Selecione</option>';
+    
+    if (categoriasPorTipo[tipo]) {
+      categoriasPorTipo[tipo].forEach(categoria => {
+        const option = document.createElement('option');
+        option.value = categoria;
+        option.textContent = categoria;
+        categoriaSelect.appendChild(option);
+      });
+    }
+  }
+  
+  // Função para atualizar atributos quando categoria muda
+  function atualizarAtributosEdicao(categoria) {
+    const container = document.getElementById('atributos-edit-container');
+    
+    if (!atributosPorCategoria[categoria] || atributosPorCategoria[categoria].length === 0) {
+      container.innerHTML = '<div class="text-muted">Nenhum atributo específico para esta categoria.</div>';
+      return;
+    }
+    
+    let html = '<div class="row g-3">';
+    atributosPorCategoria[categoria].forEach(atributo => {
+      html += `
+        <div class="col-md-6">
+          <label class="form-label">${atributo.label}</label>`;
+      
+      if (atributo.tipo === 'select') {
+        html += `<select class="form-select" name="${atributo.campo}" id="edit-${atributo.campo}">
+          <option value="">Selecione</option>`;
+        atributo.opcoes.forEach(opcao => {
+          const selected = atributosData[atributo.campo] === opcao ? 'selected' : '';
+          html += `<option value="${opcao}" ${selected}>${opcao}</option>`;
+        });
+        html += '</select>';
+      } else {
+        const valorAtual = atributosData[atributo.campo] || '';
+        html += `<input type="${atributo.tipo}" class="form-control" name="${atributo.campo}" id="edit-${atributo.campo}" value="${valorAtual}">`;
+      }
+      
+      html += '</div>';
+    });
+    html += '</div>';
+    
+    container.innerHTML = html;
+  }
+  
+  // Função para alternar modo edição
+  function toggleModoEdicao() {
+    const sections = document.querySelectorAll('.edit-section');
+    const viewSections = document.querySelectorAll('[id$="-view"]');
+    const botoesEdit = document.getElementById('botoes-edit');
+    const btnToggle = document.getElementById('btn-toggle-edit');
+    
+    sections.forEach(section => {
+      section.style.display = section.style.display === 'none' ? 'block' : 'none';
+    });
+    
+    viewSections.forEach(section => {
+      section.style.display = section.style.display === 'none' ? 'block' : 'none';
+    });
+    
+    botoesEdit.style.display = botoesEdit.style.display === 'none' ? 'flex' : 'none';
+    btnToggle.innerHTML = btnToggle.innerHTML.includes('Editar') ? 
+      '<i class="bi bi-eye me-1"></i> Visualizar' : 
+      '<i class="bi bi-pencil me-1"></i> Editar Ativo';
+  }
+  
+  // Função para desvincular contrato
+  async function desvincularContrato(contratoId) {
+    if (!confirm('Tem certeza que deseja desvincular este contrato?')) {
+      return;
+    }
+    
+    try {
+      document.getElementById('loading-overlay').classList.remove('d-none');
+      
+      const response = await fetch(`/api/ativos/${ativoId}/contratos/${contratoId}`, {
+        method: 'DELETE'
+      });
+      
+      if (response.ok) {
+        alert('Contrato desvinculado com sucesso!');
+        await carregarContratos();
+      } else {
+        alert('Erro ao desvincular contrato.');
+      }
+      
+    } catch (error) {
+      console.error('Erro ao desvincular contrato:', error);
+      alert('Erro de conexão.');
+    } finally {
+      document.getElementById('loading-overlay').classList.add('d-none');
+    }
+  }
+  
+  // Função para vincular contrato
+  async function vincularContrato() {
+    const contratoId = document.getElementById('edit-contrato_id').value;
+    if (!contratoId) {
+      alert('Selecione um contrato para vincular.');
+      return;
+    }
+    
+    try {
+      document.getElementById('loading-overlay').classList.remove('d-none');
+      
+      const response = await fetch(`/api/ativos/${ativoId}/contratos/${contratoId}`, {
+        method: 'POST'
+      });
+      
+      if (response.ok) {
+        alert('Contrato vinculado com sucesso!');
+        await carregarContratos();
+        document.getElementById('edit-contrato_id').value = '';
+      } else {
+        alert('Erro ao vincular contrato.');
+      }
+      
+    } catch (error) {
+      console.error('Erro ao vincular contrato:', error);
+      alert('Erro de conexão.');
+    } finally {
+      document.getElementById('loading-overlay').classList.add('d-none');
+    }
+  }
+  
+  // Função para salvar alterações
+  async function salvarAlteracoes() {
+    // Coleta dados do formulário básico
+    const dadosBasicos = {
+      codigo_ativo: document.getElementById('edit-codigo_ativo').value,
+      tipo_ativo: document.getElementById('edit-tipo_ativo').value,
+      categoria: document.getElementById('edit-categoria').value,
+      descricao: document.getElementById('edit-descricao').value || null,
+      status: document.getElementById('edit-status').value,
+      projeto: document.getElementById('edit-projeto').value || null,
+      data_aquisicao: document.getElementById('edit-data_aquisicao').value || null,
+      observacoes: document.getElementById('edit-observacoes').value || null,
+      proprietario_id: parseInt(document.getElementById('edit-proprietario_id').value) || null,
+      local_atual_id: parseInt(document.getElementById('edit-local_atual_id').value) || null,
+      usuario_atual_id: document.getElementById('edit-usuario_atual_id').value ? 
+        parseInt(document.getElementById('edit-usuario_atual_id').value) : null
+    };
+    
+    // Valida campos obrigatórios
+    if (!dadosBasicos.codigo_ativo || !dadosBasicos.tipo_ativo || !dadosBasicos.categoria || 
+        !dadosBasicos.status || !dadosBasicos.proprietario_id || !dadosBasicos.local_atual_id) {
+      alert('Preencha todos os campos obrigatórios.');
+      return;
+    }
+    
+    try {
+      document.getElementById('loading-overlay').classList.remove('d-none');
+      
+      // Atualiza ativo principal
+      const response = await fetch(`/api/ativos/${ativoId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(dadosBasicos)
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.erro || 'Erro ao atualizar ativo');
+      }
+      
+      // Atualiza atributos específicos
+      const atributosForm = {};
+      const atributosInputs = document.querySelectorAll('#atributos-edit-container [name]');
+      atributosInputs.forEach(input => {
+        if (input.value.trim()) {
+          atributosForm[input.name] = input.value.trim();
+        }
+      });
+      
+      if (Object.keys(atributosForm).length > 0) {
+        await fetch(`/api/ativos/${ativoId}/atributos`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(atributosForm)
+        });
+      }
+      
+      alert('Ativo atualizado com sucesso!');
+      location.reload();
+      
+    } catch (error) {
+      console.error('Erro ao salvar alterações:', error);
+      alert(`Erro ao salvar: ${error.message}`);
+    } finally {
+      document.getElementById('loading-overlay').classList.add('d-none');
+    }
+  }
+  
+  // Event listeners
+  document.getElementById('btn-toggle-edit').addEventListener('click', toggleModoEdicao);
+  document.getElementById('btn-cancelar-edit').addEventListener('click', toggleModoEdicao);
+  document.getElementById('btn-salvar-edit').addEventListener('click', () => {
+    const modal = new bootstrap.Modal(document.getElementById('modalConfirmacao'));
+    modal.show();
+  });
+  document.getElementById('btn-confirmar-salvar').addEventListener('click', () => {
+    const modal = bootstrap.Modal.getInstance(document.getElementById('modalConfirmacao'));
+    modal.hide();
+    salvarAlteracoes();
+  });
+  document.getElementById('btn-vincular-contrato').addEventListener('click', vincularContrato);
+  
+  // Atualiza categorias quando tipo muda
+  document.getElementById('edit-tipo_ativo').addEventListener('change', function() {
+    atualizarCategorias(this.value);
+  });
+  
+  // Atualiza atributos quando categoria muda
+  document.getElementById('edit-categoria').addEventListener('change', function() {
+    atualizarAtributosEdicao(this.value);
+  });
+  
+  // Inicialização
+  document.addEventListener('DOMContentLoaded', function() {
+    carregarAtivo();
+  });
+</script>
+{% endblock %}
