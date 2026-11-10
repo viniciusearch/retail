@@ -28,7 +28,7 @@ from models import (
     verificar_credenciais  # Adicionar esta importação
 )
 
-api_bp = Blueprint('api', __name__)
+api_bp = Blueprint('api', __name__, url_prefix='api/v1')
 
 # ============================================================================  
 # ROTAS BÁSICAS DE ATIVOS
