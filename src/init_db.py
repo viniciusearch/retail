@@ -9,11 +9,11 @@ import sqlite3
 
 # Caminho do banco
 DB_DIR = os.path.join(os.path.dirname(__file__), 'data')
-DB_PATH = os.path.join(DB_DIR, 'equipamentos_v2.db')
+DB_PATH = os.path.join(DB_DIR, 'equipamentos_v3.db')
 
 # Caminho dos scripts SQL
-SCHEMA_PATH = os.path.join(os.path.dirname(__file__), 'src', 'schema_v3.sql')
-SEED_PATH = os.path.join(os.path.dirname(__file__), 'src', 'seed_inicial.sql')
+SCHEMA_PATH = os.path.join(os.path.dirname(__file__), '', 'schema_v3.sql')
+SEED_PATH = os.path.join(os.path.dirname(__file__), '', 'seeds_start.sql')
 
 
 def criar_diretorio_data():

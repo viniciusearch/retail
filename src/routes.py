@@ -1,50 +1,43 @@
-# src/routes.py - VERSÃO ATUALIZADA PARA NOVA ARQUITETURA
+# src/routes.py - VERSÃO FINAL COMPLETA
 import sqlite3
 import csv
 import io
 from datetime import datetime
 from io import StringIO
-from flask import Blueprint, jsonify, request, Response, session, redirect, url_for
+from flask import Blueprint, jsonify, request, Response
 
-# Importe as funções do models atualizado
 from models import (
     get_db_connection,
-    buscar_ativos,
-    criar_ativo,
-    atualizar_ativo,
-    excluir_ativo,
-    obter_atributos_ativo,
-    atualizar_atributos_ativo,
-    obter_valores_distintos_locais,
-    obter_valores_distintos_ativos,
-    buscar_contratos_locacao,
-    vincular_ativo_contrato,
-    desvincular_ativo_contrato,
-    obter_contratos_do_ativo,
-    criar_solicitacao,
-    buscar_solicitacoes,
-    contar_ativos,
-    contar_ativos_por_status,
-    verificar_credenciais  # Adicionar esta importação
+    # Ativos
+    buscar_ativos, criar_ativo, atualizar_ativo, excluir_ativo,
+    obter_atributos_ativo, atualizar_atributos_ativo,
+    contar_ativos, contar_ativos_por_status,
+    # Empresas
+    buscar_empresas, obter_empresa, criar_empresa, atualizar_empresa, excluir_empresa,
+    # Setores
+    buscar_setores, obter_setor, criar_setor, atualizar_setor, excluir_setor,
+    # Locais
+    buscar_locais, obter_local, criar_local, atualizar_local, excluir_local,
+    # Usuários
+    buscar_usuarios, obter_usuario, criar_usuario, atualizar_usuario, excluir_usuario,
+    # Contratos e Solicitações
+    buscar_contratos_locacao, vincular_ativo_contrato, desvincular_ativo_contrato, obter_contratos_do_ativo,
+    criar_solicitacao, buscar_solicitacoes,
+    # Autenticação
+    verificar_credenciais
 )
 
-api_bp = Blueprint('api', __name__, url_prefix='api/v1')
+api_bp = Blueprint('api', __name__)
 
-# ============================================================================  
-# ROTAS BÁSICAS DE ATIVOS
-# ============================================================================  
+# ============================================================================
+# 1. ATIVOS
+# ============================================================================
 
 @api_bp.route('/ativos', methods=['GET'])
 def buscar_ativos_api():
-    """
-    Busca ativos com filtros avançados
-    """
     filtros = {}
-    
-    # Filtros básicos
-    campos_filtro = ['tipo_ativo', 'categoria', 'status', 'codigo_ativo', 'descricao', 
+    campos_filtro = ['tipo_ativo', 'categoria', 'status', 'codigo_ativo', 'descricao',
                     'ambiente_local', 'predio', 'setor_local', 'proprietario', 'usuario']
-    
     for campo in campos_filtro:
         valor = request.args.get(campo)
         if valor:
@@ -52,61 +45,39 @@ def buscar_ativos_api():
                 filtros[campo] = [v.strip() for v in valor.split(',') if v.strip()]
             else:
                 filtros[campo] = valor
-    
-    resultados = buscar_ativos(filtros)
-    return jsonify([dict(row) for row in resultados])
+    return jsonify([dict(row) for row in buscar_ativos(filtros)])
+
 
 @api_bp.route('/ativos/<int:ativo_id>', methods=['GET'])
 def obter_ativo(ativo_id):
-    """
-    Retorna um ativo específico com seus relacionamentos
-    """
     try:
         with get_db_connection() as conn:
             cursor = conn.cursor()
-            
             cursor.execute("""
-                SELECT 
-                    a.*,
-                    e.nome as proprietario_nome,
-                    u.nome_completo as usuario_nome,
-                    l.nome as local_nome,
-                    l.ambiente as local_ambiente,
-                    l.predio as local_predio,
-                    l.setor as local_setor
+                SELECT a.*, e.nome as proprietario_nome, u.nome_completo as usuario_nome,
+                       l.nome as local_nome, l.ambiente as local_ambiente, l.predio as local_predio, l.setor as local_setor
                 FROM ativos a
                 LEFT JOIN empresas e ON a.proprietario_id = e.id
-                LEFT JOIN usuarios u ON a.usuario_atual_id = u.id  
+                LEFT JOIN usuarios u ON a.usuario_atual_id = u.id
                 LEFT JOIN locais l ON a.local_atual_id = l.id
                 WHERE a.id = ?
             """, (ativo_id,))
-            
             ativo = cursor.fetchone()
-            
             if not ativo:
                 return jsonify({"erro": "Ativo não encontrado"}), 404
-            
             return jsonify(dict(ativo))
-            
     except Exception as e:
         return jsonify({"erro": f"Erro ao buscar ativo: {str(e)}"}), 500
 
+
 @api_bp.route('/ativos', methods=['POST'])
 def criar_ativo_api():
-    """
-    Cria um novo ativo
-    """
     dados = request.get_json()
     if not dados:
         return jsonify({"erro": "Dados JSON obrigatórios"}), 400
-    
     try:
         ativo_id = criar_ativo(dados)
-        return jsonify({
-            "mensagem": "Ativo cadastrado com sucesso",
-            "id": ativo_id,
-            "codigo_ativo": dados.get('codigo_ativo')
-        }), 201
+        return jsonify({"mensagem": "Ativo cadastrado com sucesso", "id": ativo_id, "codigo_ativo": dados.get('codigo_ativo')}), 201
     except ValueError as e:
         return jsonify({"erro": str(e)}), 400
     except sqlite3.IntegrityError as e:
@@ -116,603 +87,523 @@ def criar_ativo_api():
     except Exception as e:
         return jsonify({"erro": f"Erro interno: {str(e)}"}), 500
 
+
 @api_bp.route('/ativos/<int:ativo_id>', methods=['PATCH'])
 def atualizar_ativo_api(ativo_id):
-    """
-    Atualiza os dados de um ativo
-    """
     dados = request.get_json()
     if not dados:
         return jsonify({"erro": "Corpo JSON vazio"}), 400
-
-    if atualizar_ativo(ativo_id, dados):
-        return jsonify({"mensagem": "Ativo atualizado"}), 200
-    else:
+    try:
+        if atualizar_ativo(ativo_id, dados):
+            return jsonify({"mensagem": "Ativo atualizado"}), 200
         return jsonify({"erro": "Ativo não encontrado"}), 404
+    except ValueError as e:
+        return jsonify({"erro": str(e)}), 400
+    except Exception as e:
+        return jsonify({"erro": f"Erro interno: {str(e)}"}), 500
+
 
 @api_bp.route('/ativos/<int:ativo_id>', methods=['DELETE'])
 def deletar_ativo_api(ativo_id):
-    """
-    Exclui um ativo
-    """
     try:
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT id FROM ativos WHERE id = ?", (ativo_id,))
-            if not cursor.fetchone():
-                return jsonify({"erro": "Ativo não encontrado"}), 404
-            
-            cursor.execute("DELETE FROM ativos WHERE id = ?", (ativo_id,))
-            conn.commit()
-            
-        return jsonify({"mensagem": f"Ativo {ativo_id} excluído com sucesso"}), 200
+        if excluir_ativo(ativo_id):
+            return jsonify({"mensagem": f"Ativo {ativo_id} excluído com sucesso"}), 200
+        return jsonify({"erro": "Ativo não encontrado"}), 404
     except Exception as e:
         return jsonify({"erro": f"Erro ao excluir: {str(e)}"}), 500
 
-# ============================================================================  
-# ROTAS DE ATRIBUTOS DINÂMICOS
-# ============================================================================  
 
 @api_bp.route('/ativos/<int:ativo_id>/atributos', methods=['GET'])
 def obter_atributos_ativo_api(ativo_id):
-    """
-    Retorna os atributos dinâmicos de um ativo
-    """
     try:
-        atributos = obter_atributos_ativo(ativo_id)
-        return jsonify(atributos)
+        return jsonify(obter_atributos_ativo(ativo_id))
     except Exception as e:
         return jsonify({"erro": f"Erro ao buscar atributos: {str(e)}"}), 500
 
+
 @api_bp.route('/ativos/<int:ativo_id>/atributos', methods=['PUT'])
 def atualizar_atributos_ativo_api(ativo_id):
-    """
-    Atualiza os atributos dinâmicos de um ativo
-    """
     dados = request.get_json()
     if not dados:
         return jsonify({"erro": "Dados JSON obrigatórios"}), 400
-    
     try:
         atualizar_atributos_ativo(ativo_id, dados)
         return jsonify({"mensagem": "Atributos atualizados com sucesso"}), 200
     except Exception as e:
         return jsonify({"erro": f"Erro ao atualizar atributos: {str(e)}"}), 500
 
-# ============================================================================  
-# ROTAS DE CONTRATOS DE LOCAÇÃO
-# ============================================================================  
 
-@api_bp.route('/contratos-locacao', methods=['GET'])
-def buscar_contratos_locacao_api():
-    """
-    Busca contratos de locação com filtros
-    """
-    filtros = {}
-    
-    if request.args.get('numero_contrato'):
-        filtros['numero_contrato'] = request.args.get('numero_contrato')
-    if request.args.get('fornecedor'):
-        filtros['fornecedor'] = request.args.get('fornecedor')
-    if request.args.get('status'):
-        filtros['status'] = request.args.get('status')
-    
-    resultados = buscar_contratos_locacao(filtros)
-    return jsonify([dict(row) for row in resultados])
+# ============================================================================
+# 2. EMPRESAS
+# ============================================================================
 
-@api_bp.route('/contratos-locacao', methods=['POST'])
-def criar_contrato_locacao_api():
-    """
-    Cria um novo contrato de locação
-    """
+@api_bp.route('/empresas', methods=['GET'])
+def listar_empresas():
+    try:
+        if request.args.get('dropdown') == 'true':
+            with get_db_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT id, nome, tipo FROM empresas ORDER BY nome")
+                return jsonify([dict(row) for row in cursor.fetchall()])
+        filtros = {}
+        if request.args.get('nome'):
+            filtros['nome'] = request.args.get('nome')
+        if request.args.get('tipo'):
+            filtros['tipo'] = request.args.get('tipo')
+        return jsonify([dict(row) for row in buscar_empresas(filtros)])
+    except Exception as e:
+        return jsonify({"erro": f"Erro ao buscar empresas: {str(e)}"}), 500
+
+
+@api_bp.route('/empresas/<int:empresa_id>', methods=['GET'])
+def obter_empresa_api(empresa_id):
+    try:
+        resultado = obter_empresa(empresa_id)
+        return jsonify(resultado) if resultado else (jsonify({"erro": "Empresa não encontrada"}), 404)
+    except Exception as e:
+        return jsonify({"erro": f"Erro ao buscar empresa: {str(e)}"}), 500
+
+
+@api_bp.route('/empresas', methods=['POST'])
+def criar_empresa_api():
     dados = request.get_json()
     if not dados:
         return jsonify({"erro": "Dados JSON obrigatórios"}), 400
-    
-    campos_obrigatorios = ['numero_contrato', 'empresa_id', 'data_inicio', 'valor_total', 'periodo_cobranca']
-    for campo in campos_obrigatorios:
-        if not dados.get(campo):
-            return jsonify({"erro": f"Campo obrigatório '{campo}' não fornecido"}), 400
-    
     try:
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            
-            campos = ['numero_contrato', 'empresa_id', 'data_inicio', 'data_fim', 
-                     'valor_total', 'periodo_cobranca', 'duracao_meses', 'observacoes']
-            valores = [dados.get(campo) for campo in campos]
-            
-            placeholders = ','.join(['?'] * len(campos))
-            campos_str = ','.join(campos)
-            
-            cursor.execute(f"INSERT INTO contratos_locacao ({campos_str}) VALUES ({placeholders})", valores)
-            contrato_id = cursor.lastrowid
-            conn.commit()
-            
-        return jsonify({
-            "mensagem": "Contrato de locação criado com sucesso",
-            "id": contrato_id
-        }), 201
-        
+        empresa_id = criar_empresa(dados)
+        return jsonify({"mensagem": "Empresa criada com sucesso", "id": empresa_id, "nome": dados.get('nome')}), 201
+    except ValueError as e:
+        return jsonify({"erro": str(e)}), 400
+    except sqlite3.IntegrityError:
+        return jsonify({"erro": "Já existe uma empresa com este nome"}), 409
+    except Exception as e:
+        return jsonify({"erro": f"Erro interno: {str(e)}"}), 500
+
+
+@api_bp.route('/empresas/<int:empresa_id>', methods=['PUT'])
+def atualizar_empresa_api(empresa_id):
+    dados = request.get_json()
+    if not dados:
+        return jsonify({"erro": "Corpo JSON vazio"}), 400
+    try:
+        if atualizar_empresa(empresa_id, dados):
+            return jsonify({"mensagem": "Empresa atualizada"}), 200
+        return jsonify({"erro": "Empresa não encontrada"}), 404
+    except sqlite3.IntegrityError:
+        return jsonify({"erro": "Nome de empresa já existe"}), 409
+    except Exception as e:
+        return jsonify({"erro": f"Erro interno: {str(e)}"}), 500
+
+
+@api_bp.route('/empresas/<int:empresa_id>', methods=['DELETE'])
+def excluir_empresa_api(empresa_id):
+    try:
+        if excluir_empresa(empresa_id):
+            return jsonify({"mensagem": "Empresa excluída"}), 200
+        return jsonify({"erro": "Empresa não encontrada"}), 404
+    except ValueError as e:
+        return jsonify({"erro": str(e)}), 409
+    except Exception as e:
+        return jsonify({"erro": f"Erro ao excluir: {str(e)}"}), 500
+
+
+# ============================================================================
+# 3. SETORES
+# ============================================================================
+
+@api_bp.route('/setores', methods=['GET'])
+def listar_setores():
+    try:
+        if request.args.get('dropdown') == 'true':
+            with get_db_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT id, nome, sigla FROM setores WHERE ativo = 1 ORDER BY nome")
+                return jsonify([dict(row) for row in cursor.fetchall()])
+        filtros = {'nome': request.args.get('nome')} if request.args.get('nome') else {}
+        return jsonify([dict(row) for row in buscar_setores(filtros)])
+    except Exception as e:
+        return jsonify({"erro": f"Erro ao buscar setores: {str(e)}"}), 500
+
+
+@api_bp.route('/setores/<int:setor_id>', methods=['GET'])
+def obter_setor_api(setor_id):
+    try:
+        resultado = obter_setor(setor_id)
+        return jsonify(resultado) if resultado else (jsonify({"erro": "Setor não encontrado"}), 404)
+    except Exception as e:
+        return jsonify({"erro": f"Erro ao buscar setor: {str(e)}"}), 500
+
+
+@api_bp.route('/setores', methods=['POST'])
+def criar_setor_api():
+    dados = request.get_json()
+    if not dados or not dados.get('nome'):
+        return jsonify({"erro": "Campo 'nome' é obrigatório"}), 400
+    try:
+        return jsonify({"mensagem": "Setor criado com sucesso", "id": criar_setor(dados)}), 201
+    except sqlite3.IntegrityError:
+        return jsonify({"erro": "Nome ou sigla de setor já existe"}), 409
+    except Exception as e:
+        return jsonify({"erro": f"Erro interno: {str(e)}"}), 500
+
+
+@api_bp.route('/setores/<int:setor_id>', methods=['PUT'])
+def atualizar_setor_api(setor_id):
+    dados = request.get_json()
+    if not dados:
+        return jsonify({"erro": "Corpo JSON vazio"}), 400
+    try:
+        if atualizar_setor(setor_id, dados):
+            return jsonify({"mensagem": "Setor atualizado"}), 200
+        return jsonify({"erro": "Setor não encontrado"}), 404
+    except sqlite3.IntegrityError:
+        return jsonify({"erro": "Nome ou sigla de setor já existe"}), 409
+    except Exception as e:
+        return jsonify({"erro": f"Erro interno: {str(e)}"}), 500
+
+
+@api_bp.route('/setores/<int:setor_id>', methods=['DELETE'])
+def excluir_setor_api(setor_id):
+    try:
+        if excluir_setor(setor_id):
+            return jsonify({"mensagem": "Setor excluído"}), 200
+        return jsonify({"erro": "Setor não encontrado"}), 404
+    except ValueError as e:
+        return jsonify({"erro": str(e)}), 409
+    except Exception as e:
+        return jsonify({"erro": f"Erro ao excluir: {str(e)}"}), 500
+
+
+# ============================================================================
+# 4. LOCAIS
+# ============================================================================
+
+@api_bp.route('/locais', methods=['GET'])
+def listar_locais():
+    try:
+        if request.args.get('dropdown') == 'true':
+            with get_db_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT id, nome, codigo, ambiente, predio, setor FROM locais WHERE ativo = 1 ORDER BY nome")
+                return jsonify([dict(row) for row in cursor.fetchall()])
+        filtros = {k: request.args.get(k) for k in ['nome', 'codigo', 'ambiente', 'predio', 'setor'] if request.args.get(k)}
+        return jsonify([dict(row) for row in buscar_locais(filtros)])
+    except Exception as e:
+        return jsonify({"erro": f"Erro ao buscar locais: {str(e)}"}), 500
+
+
+@api_bp.route('/locais/<int:local_id>', methods=['GET'])
+def obter_local_api(local_id):
+    try:
+        resultado = obter_local(local_id)
+        return jsonify(resultado) if resultado else (jsonify({"erro": "Local não encontrado"}), 404)
+    except Exception as e:
+        return jsonify({"erro": f"Erro ao buscar local: {str(e)}"}), 500
+
+
+@api_bp.route('/locais', methods=['POST'])
+def criar_local_api():
+    dados = request.get_json()
+    if not dados:
+        return jsonify({"erro": "Dados JSON obrigatórios"}), 400
+    for campo in ['nome', 'codigo', 'ambiente', 'setor']:
+        if not dados.get(campo):
+            return jsonify({"erro": f"Campo '{campo}' é obrigatório"}), 400
+    try:
+        return jsonify({"mensagem": "Local criado com sucesso", "id": criar_local(dados)}), 201
+    except ValueError as e:
+        return jsonify({"erro": str(e)}), 400
+    except sqlite3.IntegrityError:
+        return jsonify({"erro": "Código ou Nome de local já existe"}), 409
+    except Exception as e:
+        return jsonify({"erro": f"Erro interno: {str(e)}"}), 500
+
+
+@api_bp.route('/locais/<int:local_id>', methods=['PUT'])
+def atualizar_local_api(local_id):
+    dados = request.get_json()
+    if not dados:
+        return jsonify({"erro": "Corpo JSON vazio"}), 400
+    try:
+        if atualizar_local(local_id, dados):
+            return jsonify({"mensagem": "Local atualizado"}), 200
+        return jsonify({"erro": "Local não encontrado"}), 404
+    except ValueError as e:
+        return jsonify({"erro": str(e)}), 400
+    except sqlite3.IntegrityError:
+        return jsonify({"erro": "Código ou Nome de local já existe"}), 409
+    except Exception as e:
+        return jsonify({"erro": f"Erro interno: {str(e)}"}), 500
+
+
+@api_bp.route('/locais/<int:local_id>', methods=['DELETE'])
+def excluir_local_api(local_id):
+    try:
+        if excluir_local(local_id):
+            return jsonify({"mensagem": "Local excluído"}), 200
+        return jsonify({"erro": "Local não encontrado"}), 404
+    except ValueError as e:
+        return jsonify({"erro": str(e)}), 409
+    except Exception as e:
+        return jsonify({"erro": f"Erro ao excluir: {str(e)}"}), 500
+
+
+# ============================================================================
+# 5. USUÁRIOS
+# ============================================================================
+
+@api_bp.route('/usuarios', methods=['GET'])
+def listar_usuarios():
+    try:
+        if request.args.get('dropdown') == 'true':
+            with get_db_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT id, nome_completo FROM usuarios WHERE status = 'Ativo' ORDER BY nome_completo")
+                return jsonify([dict(row) for row in cursor.fetchall()])
+        filtros = {}
+        if request.args.get('nome'):
+            filtros['nome'] = request.args.get('nome')
+        if request.args.get('status'):
+            filtros['status'] = request.args.get('status')
+        if request.args.get('setor_id'):
+            filtros['setor_id'] = int(request.args.get('setor_id'))
+        return jsonify([dict(row) for row in buscar_usuarios(filtros)])
+    except Exception as e:
+        return jsonify({"erro": f"Erro ao buscar usuários: {str(e)}"}), 500
+
+
+@api_bp.route('/usuarios/<int:usuario_id>', methods=['GET'])
+def obter_usuario_api(usuario_id):
+    try:
+        resultado = obter_usuario(usuario_id)
+        return jsonify(resultado) if resultado else (jsonify({"erro": "Usuário não encontrado"}), 404)
+    except Exception as e:
+        return jsonify({"erro": f"Erro ao buscar usuário: {str(e)}"}), 500
+
+
+@api_bp.route('/usuarios', methods=['POST'])
+def criar_usuario_api():
+    dados = request.get_json()
+    if not dados:
+        return jsonify({"erro": "Dados JSON obrigatórios"}), 400
+    try:
+        usuario_id = criar_usuario(dados)
+        return jsonify({"mensagem": "Usuário criado com sucesso", "id": usuario_id, "nome": dados.get('nome_completo')}), 201
+    except ValueError as e:
+        return jsonify({"erro": str(e)}), 400
     except sqlite3.IntegrityError as e:
-        if 'UNIQUE constraint failed' in str(e) and 'numero_contrato' in str(e):
-            return jsonify({"erro": "Número de contrato já existe"}), 409
+        if 'email' in str(e):
+            return jsonify({"erro": "E-mail já está em uso"}), 409
+        if 'matricula' in str(e):
+            return jsonify({"erro": "Matrícula já está em uso"}), 409
         return jsonify({"erro": "Erro de integridade ao salvar"}), 400
     except Exception as e:
         return jsonify({"erro": f"Erro interno: {str(e)}"}), 500
 
-@api_bp.route('/ativos/<int:ativo_id>/contratos/<int:contrato_id>', methods=['POST'])
-def vincular_ativo_contrato_api(ativo_id, contrato_id):
-    """
-    Vincula um ativo a um contrato de locação
-    """
-    try:
-        if vincular_ativo_contrato(ativo_id, contrato_id):
-            return jsonify({"mensagem": "Ativo vinculado ao contrato com sucesso"}), 200
-        else:
-            return jsonify({"erro": "Falha ao vincular ativo ao contrato"}), 400
-    except Exception as e:
-        return jsonify({"erro": f"Erro ao vincular: {str(e)}"}), 500
 
-@api_bp.route('/ativos/<int:ativo_id>/contratos/<int:contrato_id>', methods=['DELETE'])
-def desvincular_ativo_contrato_api(ativo_id, contrato_id):
-    """
-    Remove o vínculo entre ativo e contrato
-    """
-    try:
-        if desvincular_ativo_contrato(ativo_id, contrato_id):
-            return jsonify({"mensagem": "Vínculo removido com sucesso"}), 200
-        else:
-            return jsonify({"erro": "Falha ao remover vínculo"}), 400
-    except Exception as e:
-        return jsonify({"erro": f"Erro ao remover vínculo: {str(e)}"}), 500
-
-@api_bp.route('/ativos/<int:ativo_id>/contratos', methods=['GET'])
-def obter_contratos_do_ativo_api(ativo_id):
-    """
-    Retorna todos os contratos vinculados a um ativo
-    """
-    try:
-        contratos = obter_contratos_do_ativo(ativo_id)
-        return jsonify([dict(row) for row in contratos])
-    except Exception as e:
-        return jsonify({"erro": f"Erro ao buscar contratos: {str(e)}"}), 500
-
-# ============================================================================  
-# ROTAS DE SOLICITAÇÕES
-# ============================================================================  
-
-@api_bp.route('/solicitacoes', methods=['GET'])
-def buscar_solicitacoes_api():
-    """
-    Busca solicitações com filtros
-    """
-    filtros = {}
-    
-    if request.args.get('status'):
-        filtros['status'] = request.args.get('status')
-    if request.args.get('setor_solicitante_id'):
-        filtros['setor_solicitante_id'] = request.args.get('setor_solicitante_id')
-    if request.args.get('gestor_solicitante_id'):
-        filtros['gestor_solicitante_id'] = request.args.get('gestor_solicitante_id')
-    
-    resultados = buscar_solicitacoes(filtros)
-    return jsonify([dict(row) for row in resultados])
-
-@api_bp.route('/solicitacoes', methods=['POST'])
-def criar_solicitacao_api():
-    """
-    Cria uma nova solicitação
-    """
+@api_bp.route('/usuarios/<int:usuario_id>', methods=['PUT'])
+def atualizar_usuario_api(usuario_id):
     dados = request.get_json()
     if not dados:
-        return jsonify({"erro": "Dados JSON obrigatórios"}), 400
-    
+        return jsonify({"erro": "Corpo JSON vazio"}), 400
     try:
-        solicitacao_id = criar_solicitacao(dados)
-        return jsonify({
-            "mensagem": "Solicitação criada com sucesso",
-            "id": solicitacao_id
-        }), 201
-    except ValueError as e:
-        return jsonify({"erro": str(e)}), 400
+        if atualizar_usuario(usuario_id, dados):
+            return jsonify({"mensagem": "Usuário atualizado com sucesso"}), 200
+        return jsonify({"erro": "Usuário não encontrado"}), 404
+    except sqlite3.IntegrityError as e:
+        if 'email' in str(e):
+            return jsonify({"erro": "E-mail já está em uso"}), 409
+        if 'matricula' in str(e):
+            return jsonify({"erro": "Matrícula já está em uso"}), 409
+        return jsonify({"erro": "Erro de integridade ao atualizar"}), 400
     except Exception as e:
         return jsonify({"erro": f"Erro interno: {str(e)}"}), 500
 
-# ============================================================================  
-# ROTAS DE LISTAS CONTROLADAS (PARA DROPDOWNS)
-# ============================================================================  
 
-@api_bp.route('/locais', methods=['GET'])
-def listar_locais():
-    """
-    Lista todos os locais para uso em dropdowns
-    """
+@api_bp.route('/usuarios/<int:usuario_id>', methods=['DELETE'])
+def excluir_usuario_api(usuario_id):
     try:
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT id, nome, codigo, ambiente, predio, setor FROM locais ORDER BY nome")
-            locais = cursor.fetchall()
-            return jsonify([dict(row) for row in locais])
+        if excluir_usuario(usuario_id):
+            return jsonify({"mensagem": "Usuário excluído com sucesso"}), 200
+        return jsonify({"erro": "Usuário não encontrado"}), 404
+    except ValueError as e:
+        return jsonify({"erro": str(e)}), 409
     except Exception as e:
-        return jsonify({"erro": f"Erro ao buscar locais: {str(e)}"}), 500
+        return jsonify({"erro": f"Erro ao excluir: {str(e)}"}), 500
 
-@api_bp.route('/empresas', methods=['GET'])
-def listar_empresas():
-    """
-    Lista todas as empresas para uso em dropdowns
-    """
-    try:
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT id, nome, tipo FROM empresas ORDER BY nome")
-            empresas = cursor.fetchall()
-            return jsonify([dict(row) for row in empresas])
-    except Exception as e:
-        return jsonify({"erro": f"Erro ao buscar empresas: {str(e)}"}), 500
 
-@api_bp.route('/usuarios', methods=['GET'])
-def listar_usuarios():
-    """
-    Lista todos os usuários para uso em dropdowns
-    """
-    try:
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT id, nome_completo, email FROM usuarios WHERE status = 'Ativo' ORDER BY nome_completo")
-            usuarios = cursor.fetchall()
-            return jsonify([dict(row) for row in usuarios])
-    except Exception as e:
-        return jsonify({"erro": f"Erro ao buscar usuários: {str(e)}"}), 500
+# ============================================================================
+# 6. CARGOS E PERFIS (DROPDOWNS)
+# ============================================================================
 
 @api_bp.route('/cargos', methods=['GET'])
 def listar_cargos():
-    """
-    Lista todos os cargos para uso em dropdowns
-    """
     try:
         with get_db_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT id, nome FROM cargos ORDER BY nome")
-            cargos = cursor.fetchall()
-            return jsonify([dict(row) for row in cargos])
+            query = "SELECT id, nome FROM cargos ORDER BY nome" if request.args.get('dropdown') == 'true' else "SELECT id, nome, descricao FROM cargos ORDER BY nome"
+            cursor.execute(query)
+            return jsonify([dict(row) for row in cursor.fetchall()])
     except Exception as e:
         return jsonify({"erro": f"Erro ao buscar cargos: {str(e)}"}), 500
 
-@api_bp.route('/setores', methods=['GET'])
-def listar_setores():
-    """
-    Lista todos os setores para uso em dropdowns
-    """
+
+@api_bp.route('/perfis', methods=['GET'])
+def listar_perfis():
     try:
         with get_db_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT id, nome FROM setores ORDER BY nome")
-            setores = cursor.fetchall()
-            return jsonify([dict(row) for row in setores])
+            query = "SELECT id, nome FROM perfis_usuario ORDER BY nivel_acesso DESC" if request.args.get('dropdown') == 'true' else "SELECT id, nome, nivel_acesso, descricao FROM perfis_usuario ORDER BY nivel_acesso DESC"
+            cursor.execute(query)
+            return jsonify([dict(row) for row in cursor.fetchall()])
     except Exception as e:
-        return jsonify({"erro": f"Erro ao buscar setores: {str(e)}"}), 500
+        return jsonify({"erro": f"Erro ao buscar perfis: {str(e)}"}), 500
 
-# ============================================================================  
-# ROTAS DE FILTROS E LISTAS CONTROLADAS
-# ============================================================================  
 
-@api_bp.route('/filtros/locais', methods=['GET'])
-def obter_filtros_locais():
-    """
-    Retorna valores distintos para filtros de locais
-    """
-    try:
-        valores = obter_valores_distintos_locais()
-        return jsonify(valores)
-    except Exception as e:
-        return jsonify({"erro": f"Erro ao buscar filtros de locais: {str(e)}"}), 500
+# ============================================================================
+# 7. CONTRATOS E SOLICITAÇÕES
+# ============================================================================
 
-@api_bp.route('/filtros/ativos', methods=['GET'])
-def obter_filtros_ativos():
-    """
-    Retorna valores distintos para filtros de ativos
-    """
-    try:
-        valores = obter_valores_distintos_ativos()
-        return jsonify(valores)
-    except Exception as e:
-        return jsonify({"erro": f"Erro ao buscar filtros de ativos: {str(e)}"}), 500
+@api_bp.route('/contratos-locacao', methods=['GET'])
+def buscar_contratos_locacao_api():
+    filtros = {k: request.args.get(k) for k in ['numero_contrato', 'fornecedor', 'status'] if request.args.get(k)}
+    return jsonify([dict(row) for row in buscar_contratos_locacao(filtros)])
 
-# ============================================================================  
-# ROTAS DE ESTATÍSTICAS E DASHBOARD
-# ============================================================================  
 
-@api_bp.route('/estatisticas/ativos', methods=['GET'])
-def estatisticas_ativos():
-    """
-    Retorna estatísticas gerais dos ativos
-    """
-    try:
-        total = contar_ativos()
-        por_status = contar_ativos_por_status()
-        
-        return jsonify({
-            'sucesso': True,
-            'estatisticas': {
-                'total_ativos': total,
-                'por_status': [{'status': row[0], 'total': row[1]} for row in por_status]
-            }
-        })
-    except Exception as e:
-        return jsonify({"erro": f"Erro ao buscar estatísticas: {str(e)}"}), 500
+@api_bp.route('/solicitacoes', methods=['GET'])
+def buscar_solicitacoes_api():
+    filtros = {'status': request.args.get('status')} if request.args.get('status') else {}
+    return jsonify([dict(row) for row in buscar_solicitacoes(filtros)])
 
-# ============================================================================  
-# ROTAS DE EXPORTAÇÃO
-# ============================================================================  
+
+# ============================================================================
+# 8. EXPORTAÇÃO E UPLOAD
+# ============================================================================
 
 @api_bp.route('/ativos/exportar', methods=['GET'])
 def exportar_ativos():
-    """
-    Exporta ativos para CSV baseado em filtros
-    """
     try:
-        # Coleta filtros da query string
-        filtros = {}
-        campos_filtro = ['tipo_ativo', 'categoria', 'status', 'ambiente_local', 'predio', 'setor_local']
-        for campo in campos_filtro:
-            valor = request.args.get(campo, '').strip()
-            if valor:
-                filtros[campo] = valor
-        
-        # Busca ativos
+        filtros = {k: request.args.get(k, '').strip() for k in ['tipo_ativo', 'categoria', 'status', 'ambiente_local', 'predio', 'setor_local'] if request.args.get(k)}
         resultados = buscar_ativos(filtros)
-        
         if not resultados:
-            return jsonify({
-                'sucesso': False,
-                'erro': 'Nenhum ativo encontrado para exportar'
-            }), 404
-        
-        # Cria CSV
+            return jsonify({'sucesso': False, 'erro': 'Nenhum ativo encontrado'}), 404
         output = StringIO()
         writer = csv.writer(output)
-        
-        # Cabeçalho
-        cabecalho = [
-            'codigo_ativo', 'tipo_ativo', 'categoria', 'descricao', 'status',
-            'proprietario_nome', 'usuario_nome', 'local_nome', 'projeto',
-            'data_aquisicao', 'observacoes'
-        ]
+        cabecalho = ['codigo_ativo', 'tipo_ativo', 'categoria', 'descricao', 'status', 'proprietario_nome', 'usuario_nome', 'local_nome', 'projeto']
         writer.writerow(cabecalho)
-        
-        # Dados
         for row in resultados:
-            linha = [
-                row['codigo_ativo'],
-                row['tipo_ativo'],
-                row['categoria'],
-                row['descricao'],
-                row['status'],
-                row['proprietario_nome'],
-                row['usuario_nome'],
-                row['local_nome'],
-                row['projeto'],
-                row['data_aquisicao'],
-                row['observacoes']
-            ]
-            writer.writerow([str(value) if value is not None else '' for value in linha])
-        
-        # Configura resposta
+            writer.writerow([str(row.get(c, '')) if row.get(c) is not None else '' for c in cabecalho])
         filename = f'ativos_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv'
-        
-        return Response(
-            output.getvalue(),
-            mimetype='text/csv',
-            headers={
-                'Content-Disposition': f'attachment; filename={filename}',
-                'Content-Type': 'text/csv; charset=utf-8'
-            }
-        )
-        
+        return Response(output.getvalue(), mimetype='text/csv', headers={'Content-Disposition': f'attachment; filename={filename}'})
     except Exception as e:
-        return jsonify({
-            'sucesso': False,
-            'erro': f'Erro ao exportar: {str(e)}'
-        }), 500
+        return jsonify({'sucesso': False, 'erro': f'Erro ao exportar: {str(e)}'}), 500
 
-# ============================================================================  
-# ROTAS DE SAÚDE DO SISTEMA
-# ============================================================================  
-
-@api_bp.route('/health', methods=['GET'])
-def health_check():
-    """
-    Verifica status da API
-    """
-    try:
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT COUNT(*) FROM ativos")
-            total = cursor.fetchone()[0]
-            
-            cursor.execute("SELECT MAX(data_aquisicao) FROM ativos")
-            ultima_atualizacao = cursor.fetchone()[0]
-        
-        return jsonify({
-            'status': 'online',
-            'mensagem': 'API operacional',
-            'total_ativos': total,
-            'ultima_atualizacao': ultima_atualizacao,
-            'timestamp': datetime.now().isoformat()
-        })
-        
-    except Exception as e:
-        return jsonify({
-            'status': 'error',
-            'mensagem': 'Erro na API',
-            'erro': str(e),
-            'timestamp': datetime.now().isoformat()
-        }), 500
-
-# ============================================================================  
-# ROTA DE UPLOAD EM LOTE
-# ============================================================================  
 
 @api_bp.route('/ativos/lote', methods=['POST'])
 def processar_lote_ativos():
-    """Processa upload em lote de ativos"""
     if 'file' not in request.files:
         return jsonify({"erro": "Nenhum arquivo enviado"}), 400
-    
     arquivo = request.files['file']
-    if arquivo.filename == '':
-        return jsonify({"erro": "Arquivo sem nome"}), 400
-    
     if not arquivo.filename.endswith('.csv'):
         return jsonify({"erro": "Apenas arquivos CSV são permitidos"}), 400
-    
     try:
         stream = io.StringIO(arquivo.stream.read().decode("UTF-8-sig"))
-        csv_input = csv.DictReader(stream)
-        
-        if 'codigo_ativo' not in csv_input.fieldnames:
-            return jsonify({"erro": "Coluna 'codigo_ativo' obrigatória no CSV"}), 400
-        
+        csv_input = csv.DictReader(stream, delimiter=';')
+        if 'DESCRITIVO' not in csv_input.fieldnames:
+            return jsonify({"erro": "Formato de CSV inválido. Use o modelo da obra."}), 400
         resultados = {"sucesso": 0, "erros": [], "detalhes": []}
-        
-        for linha_num, linha in enumerate(csv_input, start=2):
-            try:
-                codigo_ativo = linha.get('codigo_ativo', '').strip()
-                if not codigo_ativo:
-                    resultados["erros"].append(f"Linha {linha_num}: Código de ativo obrigatório")
-                    continue
-                
-                # Prepara dados para criação
-                dados = {
-                    'codigo_ativo': codigo_ativo,
-                    'tipo_ativo': linha.get('tipo_ativo', '').strip(),
-                    'categoria': linha.get('categoria', '').strip(),
-                    'descricao': linha.get('descricao', '').strip() or None,
-                    'status': linha.get('status', 'Em uso').strip(),
-                    'projeto': linha.get('projeto', '').strip() or None,
-                    'data_aquisicao': linha.get('data_aquisicao', '').strip() or None,
-                    'observacoes': linha.get('observacoes', '').strip() or None
-                }
-                
-                # Valida campos obrigatórios
-                campos_obrigatorios = ['tipo_ativo', 'categoria', 'status']
-                for campo in campos_obrigatorios:
-                    if not dados[campo]:
-                        raise ValueError(f"Campo obrigatório '{campo}' não informado")
-                
-                # Busca IDs para relacionamentos
-                with get_db_connection() as conn:
-                    cursor = conn.cursor()
-                    
-                    # Proprietário
-                    proprietario_nome = linha.get('proprietario_nome', '').strip()
-                    if proprietario_nome:
-                        cursor.execute("SELECT id FROM empresas WHERE nome = ?", (proprietario_nome,))
-                        proprietario = cursor.fetchone()
-                        if proprietario:
-                            dados['proprietario_id'] = proprietario[0]
-                        else:
-                            raise ValueError(f"Proprietário '{proprietario_nome}' não encontrado")
-                    else:
-                        # Usa empresa proprietária padrão
-                        cursor.execute("SELECT id FROM empresas WHERE tipo = 'propria' LIMIT 1")
-                        proprietario = cursor.fetchone()
-                        dados['proprietario_id'] = proprietario[0] if proprietario else 1
-                    
-                    # Local
-                    local_nome = linha.get('local_nome', '').strip()
-                    if local_nome:
-                        cursor.execute("SELECT id FROM locais WHERE nome = ?", (local_nome,))
-                        local = cursor.fetchone()
-                        if local:
-                            dados['local_atual_id'] = local[0]
-                        else:
-                            raise ValueError(f"Local '{local_nome}' não encontrado")
-                    else:
-                        raise ValueError("Local obrigatório")
-                    
-                    # Usuário (opcional)
-                    usuario_nome = linha.get('usuario_nome', '').strip()
-                    if usuario_nome:
-                        cursor.execute("SELECT id FROM usuarios WHERE nome_completo = ?", (usuario_nome,))
-                        usuario = cursor.fetchone()
-                        if usuario:
-                            dados['usuario_atual_id'] = usuario[0]
-                    
-                    # Remove campos de texto que foram convertidos para IDs
-                    dados.pop('proprietario_nome', None)
-                    dados.pop('local_nome', None)
-                    dados.pop('usuario_nome', None)
-                
-                # Cria o ativo
-                ativo_id = criar_ativo(dados)
-                resultados["sucesso"] += 1
-                resultados["detalhes"].append(f"Criado: {codigo_ativo}")
-                
-                # Processa atributos específicos
-                atributos = {}
-                campos_atributos = ['numero_serie', 'host_name', 'teamviewer_id', 'imei', 'chip', 
-                                  'chave_licenca', 'versao', 'data_expiracao', 'tipo_licenca', 
-                                  'polegadas', 'resolucao', 'ip_impressora', 'toner_preto', 'toner_cores']
-                
-                for campo in campos_atributos:
-                    valor = linha.get(campo, '').strip()
-                    if valor:
-                        atributos[campo] = valor
-                
-                if atributos:
-                    atualizar_atributos_ativo(ativo_id, atributos)
-                
-            except Exception as e:
-                resultados["erros"].append(f"Linha {linha_num} ({codigo_ativo}): {str(e)}")
-        
-        return jsonify({
-            "mensagem": f"Upload concluído: {resultados['sucesso']} ativos criados com sucesso",
-            "resultados": resultados
-        }), 200
-        
-    except UnicodeDecodeError:
-        return jsonify({"erro": "Erro ao ler arquivo CSV. Use codificação UTF-8"}), 400
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cache_empresas = {r['nome']: r['id'] for r in cursor.execute("SELECT id, nome FROM empresas").fetchall()}
+            cache_locais = {r['nome']: r['id'] for r in cursor.execute("SELECT id, nome FROM locais").fetchall()}
+            cache_usuarios = {r['nome_completo']: r['id'] for r in cursor.execute("SELECT id, nome_completo FROM usuarios").fetchall()}
+            for linha_num, linha in enumerate(csv_input, start=2):
+                try:
+                    descritivo = linha.get('DESCRITIVO', '').strip()
+                    if not descritivo:
+                        continue
+                    pat_serie = linha.get('PATRIMONIO_NUMERO_SERIE', '').strip()
+                    patrimonio, numero_serie = None, None
+                    if '/' in pat_serie:
+                        partes = [p.strip() for p in pat_serie.split('/')]
+                        if len(partes) >= 1 and partes[0].upper() not in ['SEM PATR', '']:
+                            patrimonio = partes[0]
+                        if len(partes) >= 2 and partes[1].upper() not in ['SEM SN', 'SEM Nº SERIE', '']:
+                            numero_serie = partes[1]
+                    elif pat_serie and pat_serie.upper() not in ['SEM PATR', 'SEM SN']:
+                        numero_serie = pat_serie
+                    centro_custo = linha.get('CENTRO CUSTO', '').strip()
+                    empresa_id = cache_empresas.get(centro_custo)
+                    if not empresa_id:
+                        cursor.execute("SELECT id FROM empresas WHERE nome LIKE ?", (f"%{centro_custo}%",))
+                        res = cursor.fetchone()
+                        empresa_id = res[0] if res else None
+                    if not empresa_id:
+                        raise ValueError(f"Proprietário '{centro_custo}' não encontrado")
+                    local_nome = linha.get('LOCAL ATUAL', '').strip()
+                    local_id = cache_locais.get(local_nome)
+                    if not local_id:
+                        raise ValueError(f"Local '{local_nome}' não cadastrado no sistema")
+                    usuario_nome = linha.get('USUÁRIO', '').strip()
+                    usuario_id = cache_usuarios.get(usuario_nome)
+                    desc_upper = descritivo.upper()
+                    tipo_ativo, categoria = 'hardware', 'Outros'
+                    if 'NOTEBOOK' in desc_upper:
+                        categoria = 'Notebook'
+                    elif 'MONITOR' in desc_upper:
+                        tipo_ativo, categoria = 'periferico', 'Monitor'
+                    elif 'SMARTPHONE' in desc_upper:
+                        categoria = 'Smartphone'
+                    elif 'TABLET' in desc_upper:
+                        categoria = 'Tablet'
+                    elif 'IMPRESSORA' in desc_upper:
+                        tipo_ativo, categoria = 'periferico', 'Impressora'
+                    elif 'RADIO' in desc_upper or 'WALKIE' in desc_upper:
+                        tipo_ativo, categoria = 'radio', 'Walkie-Talkie'
+                    obs = linha.get('OBSERVAÇÃO', '').strip().upper()
+                    status = 'Desmobilizado' if 'DESMOBILIZADO' in obs else 'Em Estoque' if 'ESTOQUE' in obs else 'Com Defeito' if 'DEFEITO' in obs else 'Em uso'
+                    codigo_ativo = f"{categoria[:3].upper()}-{linha_num}"
+                    cursor.execute("""
+                        INSERT INTO ativos (codigo_ativo, patrimonio, numero_serie, tipo_ativo, categoria,
+                                           descricao, status, proprietario_id, usuario_atual_id, local_atual_id,
+                                           projeto, observacoes)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """, (codigo_ativo, patrimonio, numero_serie, tipo_ativo, categoria, descritivo, status, empresa_id, usuario_id, local_id, linha.get('OBRA / PROJETO'), obs))
+                    ativo_id = cursor.lastrowid
+                    if 'IMEI' in linha and linha['IMEI']:
+                        cursor.execute("INSERT INTO atributos_ativos (ativo_id, chave, valor) VALUES (?, ?, ?)", (ativo_id, 'imei', linha['IMEI']))
+                    resultados["sucesso"] += 1
+                except Exception as e:
+                    resultados["erros"].append(f"Linha {linha_num}: {str(e)}")
+            conn.commit()
+        return jsonify({"mensagem": f"Processamento concluído: {resultados['sucesso']} importados.", "resultados": resultados}), 200
     except Exception as e:
         return jsonify({"erro": f"Erro ao processar: {str(e)}"}), 500
 
-# ============================================================================  
-# ROTAS DE AUTENTICAÇÃO
-# ============================================================================  
+
+# ============================================================================
+# 9. SAÚDE E AUTENTICAÇÃO
+# ============================================================================
+
+@api_bp.route('/health', methods=['GET'])
+def health_check():
+    try:
+        with get_db_connection() as conn:
+            total = conn.execute("SELECT COUNT(*) FROM ativos").fetchone()[0]
+        return jsonify({'status': 'online', 'total_ativos': total})
+    except Exception as e:
+        return jsonify({'status': 'error', 'erro': str(e)}), 500
+
 
 @api_bp.route('/login', methods=['POST'])
 def login_api():
-    """
-    Autentica usuário e retorna informações do perfil
-    """
     dados = request.get_json()
     if not dados or not dados.get('email') or not dados.get('password'):
         return jsonify({"erro": "Email e senha são obrigatórios"}), 400
-    
-    email = dados['email']
-    password = dados['password']
-    
     try:
-        usuario = verificar_credenciais(email, password)
+        usuario = verificar_credenciais(dados['email'], dados['password'])
         if usuario:
-            return jsonify({
-                "sucesso": True,
-                "usuario": {
-                    "id": usuario['id'],
-                    "nome": usuario['nome_completo'],
-                    "email": usuario['email'],
-                    "perfil": usuario['perfil']
-                }
-            }), 200
-        else:
-            return jsonify({"erro": "Email ou senha inválidos"}), 401
+            return jsonify({"sucesso": True, "usuario": usuario}), 200
+        return jsonify({"erro": "Email ou senha inválidos"}), 401
     except Exception as e:
         return jsonify({"erro": f"Erro na autenticação: {str(e)}"}), 500
-
-@api_bp.route('/logout', methods=['POST'])
-def logout_api():
-    """
-    Encerra sessão do usuário
-    """
-    return jsonify({"sucesso": True, "mensagem": "Logout realizado com sucesso"}), 200

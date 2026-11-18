@@ -1,0 +1,468 @@
+{% extends "base.html" %}
+
+{% block title %}Gerenciar Usuários{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4" x-data="gerenciarUsuarios()">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2 class="mb-0">
+                <i class="bi bi-people-fill me-2"></i>Gerenciar Usuários
+            </h2>
+            <p class="text-muted mb-0">Cadastre e gerencie os colaboradores do sistema</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <button class="btn btn-primary" @click="abrirModal()">
+                <i class="bi bi-plus-circle me-2"></i>Novo Usuário
+            </button>
+        </div>
+    </div>
+
+    <!-- Filtros Rápidos -->
+    <div class="card mb-4 shadow-sm">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <input type="text" class="form-control" placeholder="Buscar por nome ou email..." 
+                           x-model="filtroBusca" @input="filtrarUsuarios()">
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select choices-select" x-model="filtroStatus" @change="filtrarUsuarios()">
+                        <option value="">Todos os Status</option>
+                        <option value="Ativo">Ativo</option>
+                        <option value="Inativo">Inativo</option>
+                        <option value="Bloqueado">Bloqueado</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select choices-select" x-model="filtroSetor" @change="filtrarUsuarios()">
+                        <option value="">Todos os Setores</option>
+                        <template x-for="setor in setores" :key="setor.id">
+                            <option :value="setor.id" x-text="setor.nome"></option>
+                        </template>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabela de Usuários -->
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" id="tabelaUsuarios">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-4">Nome</th>
+                            <th>Email</th>
+                            <th>Cargo</th>
+                            <th>Setor</th>
+                            <th>Local Padrão</th>
+                            <th>Perfil</th>
+                            <th>Status</th>
+                            <th class="text-end pe-4">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template x-if="usuariosFiltrados.length === 0">
+                            <tr>
+                                <td colspan="8" class="text-center py-5 text-muted">
+                                    <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                                    Nenhum usuário encontrado
+                                </td>
+                            </tr>
+                        </template>
+                        <template x-for="usuario in usuariosFiltrados" :key="usuario.id">
+                            <tr>
+                                <td class="ps-4">
+                                    <div class="fw-bold" x-text="usuario.nome_completo"></div>
+                                    <small class="text-muted" x-show="usuario.matricula" x-text="'Mat: ' + usuario.matricula"></small>
+                                </td>
+                                <td>
+                                    <a :href="'mailto:' + usuario.email" class="text-decoration-none" x-text="usuario.email"></a>
+                                </td>
+                                <td x-text="usuario.cargo_nome || '-'"></td>
+                                <td>
+                                    <span class="badge bg-info bg-opacity-10 text-info" x-text="usuario.setor_nome || '-'"></span>
+                                </td>
+                                <td x-text="usuario.local_nome || '-'"></td>
+                                <td>
+                                    <span class="badge" 
+                                          :class="{
+                                            'bg-danger': usuario.perfil_nome === 'Administrador',
+                                            'bg-warning text-dark': usuario.perfil_nome === 'Gestor',
+                                            'bg-primary': usuario.perfil_nome === 'Tecnico',
+                                            'bg-secondary': usuario.perfil_nome === 'Usuario'
+                                          }"
+                                          x-text="usuario.perfil_nome"></span>
+                                </td>
+                                <td>
+                                    <span class="badge" 
+                                          :class="{
+                                            'bg-success': usuario.status === 'Ativo',
+                                            'bg-secondary': usuario.status === 'Inativo',
+                                            'bg-danger': usuario.status === 'Bloqueado'
+                                          }"
+                                          x-text="usuario.status"></span>
+                                </td>
+                                <td class="text-end pe-4">
+                                    <button class="btn btn-sm btn-outline-primary me-1" @click="editarUsuario(usuario)" title="Editar">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" @click="confirmarExclusao(usuario)" title="Excluir">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Cadastro/Edição -->
+    <div class="modal fade" id="modalUsuario" tabindex="-1" x-ref="modalUsuario" @keydown.escape.window="fecharModal()">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-person-plus me-2"></i>
+                        <span x-text="editandoId ? 'Editar Usuário' : 'Novo Usuário'"></span>
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @click="fecharModal()"></button>
+                </div>
+                <div class="modal-body">
+                    <form @submit.prevent="salvarUsuario">
+                        <div class="row g-3">
+                            <!-- Nome Completo -->
+                            <div class="col-md-12">
+                                <label class="form-label">Nome Completo *</label>
+                                <input type="text" class="form-control" x-model="form.nome_completo" required placeholder="Ex: JOÃO DA SILVA">
+                            </div>
+
+                            <!-- Email -->
+                            <div class="col-md-6">
+                                <label class="form-label">Email *</label>
+                                <input type="email" class="form-control" x-model="form.email" required placeholder="ex: joao.silva@ctcinfra.com.br">
+                            </div>
+
+                            <!-- Matrícula -->
+                            <div class="col-md-6">
+                                <label class="form-label">Matrícula</label>
+                                <input type="text" class="form-control" x-model="form.matricula" placeholder="Opcional">
+                            </div>
+
+                            <!-- Cargo -->
+                            <div class="col-md-6">
+                                <label class="form-label">Cargo</label>
+                                <select class="form-select choices-select" x-model="form.cargo_id">
+                                    <option value="">Selecione...</option>
+                                    <template x-for="cargo in cargos" :key="cargo.id">
+                                        <option :value="cargo.id" x-text="cargo.nome"></option>
+                                    </template>
+                                </select>
+                            </div>
+
+                            <!-- Setor -->
+                            <div class="col-md-6">
+                                <label class="form-label">Setor</label>
+                                <select class="form-select choices-select" x-model="form.setor_id">
+                                    <option value="">Selecione...</option>
+                                    <template x-for="setor in setores" :key="setor.id">
+                                        <option :value="setor.id" x-text="setor.nome"></option>
+                                    </template>
+                                </select>
+                            </div>
+
+                            <!-- Local Padrão -->
+                            <div class="col-md-6">
+                                <label class="form-label">Local Padrão</label>
+                                <select class="form-select choices-select" x-model="form.local_padrao_id">
+                                    <option value="">Selecione...</option>
+                                    <template x-for="local in locais" :key="local.id">
+                                        <option :value="local.id" x-text="local.nome"></option>
+                                    </template>
+                                </select>
+                            </div>
+
+                            <!-- Perfil -->
+                            <div class="col-md-6">
+                                <label class="form-label">Perfil de Acesso *</label>
+                                <select class="form-select choices-select" x-model="form.perfil_id" required>
+                                    <option value="">Selecione...</option>
+                                    <template x-for="perfil in perfis" :key="perfil.id">
+                                        <option :value="perfil.id" x-text="perfil.nome"></option>
+                                    </template>
+                                </select>
+                            </div>
+
+                            <!-- Status -->
+                            <div class="col-md-6">
+                                <label class="form-label">Status</label>
+                                <select class="form-select choices-select" x-model="form.status">
+                                    <option value="Ativo">Ativo</option>
+                                    <option value="Inativo">Inativo</option>
+                                    <option value="Bloqueado">Bloqueado</option>
+                                </select>
+                            </div>
+
+                            <!-- Senha (apenas no cadastro) -->
+                            <div class="col-md-6" x-show="!editandoId">
+                                <label class="form-label">Senha</label>
+                                <input type="password" class="form-control" x-model="form.senha" placeholder="Deixe vazio para usar: mudar123">
+                            </div>
+                        </div>
+
+                        <div class="mt-4 d-flex justify-content-end gap-2">
+                            <button type="button" class="btn btn-secondary" @click="fecharModal()">Cancelar</button>
+                            <button type="submit" class="btn btn-success" :disabled="salvando">
+                                <span x-show="salvando" class="spinner-border spinner-border-sm me-2"></span>
+                                <span x-text="editandoId ? 'Atualizar' : 'Cadastrar'"></span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function gerenciarUsuarios() {
+    return {
+        usuarios: [],
+        usuariosFiltrados: [],
+        cargos: [],
+        setores: [],
+        locais: [],
+        perfis: [],
+        
+        filtroBusca: '',
+        filtroStatus: '',
+        filtroSetor: '',
+        
+        editandoId: null,
+        salvando: false,
+        
+        form: {
+            nome_completo: '',
+            email: '',
+            matricula: '',
+            cargo_id: '',
+            setor_id: '',
+            local_padrao_id: '',
+            perfil_id: '',
+            status: 'Ativo',
+            senha: ''
+        },
+
+        async init() {
+            await Promise.all([
+                this.carregarUsuarios(),
+                this.carregarCargos(),
+                this.carregarSetores(),
+                this.carregarLocais(),
+                this.carregarPerfis()
+            ]);
+            this.usuariosFiltrados = this.usuarios;
+            
+            // Inicializa DataTables se houver a biblioteca carregada
+            this.$nextTick(() => {
+                if (typeof $.fn.DataTable !== 'undefined') {
+                    $('#tabelaUsuarios').DataTable({
+                        paging: false,
+                        searching: false, // Usamos nossa própria busca com Alpine
+                        info: false,
+                        language: {
+                            emptyTable: "Nenhum usuário encontrado"
+                        }
+                    });
+                }
+            });
+        },
+
+        async carregarUsuarios() {
+            try {
+                const response = await fetch('/api/usuarios');
+                this.usuarios = await response.json();
+            } catch (error) {
+                console.error('Erro ao carregar usuários:', error);
+                Swal.fire('Erro', 'Falha ao carregar usuários', 'error');
+            }
+        },
+
+        async carregarCargos() {
+            try {
+                const response = await fetch('/api/cargos?dropdown=true');
+                this.cargos = await response.json();
+            } catch (error) { console.error('Erro cargos:', error); }
+        },
+
+        async carregarSetores() {
+            try {
+                const response = await fetch('/api/setores?dropdown=true');
+                this.setores = await response.json();
+            } catch (error) { console.error('Erro setores:', error); }
+        },
+
+        async carregarLocais() {
+            try {
+                const response = await fetch('/api/locais?dropdown=true');
+                this.locais = await response.json();
+            } catch (error) { console.error('Erro locais:', error); }
+        },
+
+        async carregarPerfis() {
+            try {
+                const response = await fetch('/api/perfis?dropdown=true');
+                this.perfis = await response.json();
+            } catch (error) { console.error('Erro perfis:', error); }
+        },
+
+        filtrarUsuarios() {
+            this.usuariosFiltrados = this.usuarios.filter(u => {
+                const matchBusca = !this.filtroBusca || 
+                    u.nome_completo.toLowerCase().includes(this.filtroBusca.toLowerCase()) ||
+                    (u.email && u.email.toLowerCase().includes(this.filtroBusca.toLowerCase()));
+                
+                const matchStatus = !this.filtroStatus || u.status === this.filtroStatus;
+                const matchSetor = !this.filtroSetor || u.setor_id == this.filtroSetor;
+                
+                return matchBusca && matchStatus && matchSetor;
+            });
+        },
+
+        abrirModal() {
+            this.editandoId = null;
+            this.form = {
+                nome_completo: '',
+                email: '',
+                matricula: '',
+                cargo_id: '',
+                setor_id: '',
+                local_padrao_id: '',
+                perfil_id: '',
+                status: 'Ativo',
+                senha: ''
+            };
+            
+            const modalEl = this.$refs.modalUsuario;
+            const modal = new bootstrap.Modal(modalEl);
+            modal.show();
+        },
+
+        editarUsuario(usuario) {
+            this.editandoId = usuario.id;
+            this.form = {
+                nome_completo: usuario.nome_completo,
+                email: usuario.email,
+                matricula: usuario.matricula || '',
+                cargo_id: usuario.cargo_id || '',
+                setor_id: usuario.setor_id || '',
+                local_padrao_id: usuario.local_padrao_id || '',
+                perfil_id: usuario.perfil_id,
+                status: usuario.status,
+                senha: ''
+            };
+            
+            const modalEl = this.$refs.modalUsuario;
+            const modal = new bootstrap.Modal(modalEl);
+            modal.show();
+        },
+
+        fecharModal() {
+            const modalEl = this.$refs.modalUsuario;
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            if (modal) {
+                modal.hide();
+            }
+            this.editandoId = null;
+        },
+
+        async salvarUsuario() {
+            this.salvando = true;
+            
+            try {
+                const payload = { ...this.form };
+                
+                // Limpeza de dados: converte strings vazias em null para campos de ID
+                ['cargo_id', 'setor_id', 'local_padrao_id'].forEach(key => {
+                    if (payload[key] === '') payload[key] = null;
+                });
+                
+                // Remove a senha se estiver vazia na edição
+                if (this.editandoId && !payload.senha) {
+                    delete payload.senha;
+                }
+
+                const url = this.editandoId ? `/api/usuarios/${this.editandoId}` : '/api/usuarios';
+                const method = this.editandoId ? 'PUT' : 'POST';
+
+                const response = await fetch(url, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Sucesso!',
+                        text: data.mensagem,
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                    
+                    this.fecharModal();
+                    await this.carregarUsuarios();
+                    this.filtrarUsuarios();
+                } else {
+                    Swal.fire('Erro', data.erro || 'Falha ao salvar usuário', 'error');
+                }
+            } catch (error) {
+                Swal.fire('Erro', 'Falha na comunicação com o servidor', 'error');
+            } finally {
+                this.salvando = false;
+            }
+        },
+
+        confirmarExclusao(usuario) {
+            Swal.fire({
+                title: 'Confirmar Exclusão',
+                text: `Deseja realmente excluir o usuário "${usuario.nome_completo}"? Esta ação não pode ser desfeita.`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Sim, excluir',
+                cancelButtonText: 'Cancelar'
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    try {
+                        const response = await fetch(`/api/usuarios/${usuario.id}`, {
+                            method: 'DELETE'
+                        });
+
+                        const data = await response.json();
+
+                        if (response.ok) {
+                            Swal.fire('Excluído!', data.mensagem, 'success');
+                            await this.carregarUsuarios();
+                            this.filtrarUsuarios();
+                        } else {
+                            Swal.fire('Erro', data.erro || 'Falha ao excluir', 'error');
+                        }
+                    } catch (error) {
+                        Swal.fire('Erro', 'Falha na comunicação com o servidor', 'error');
+                    }
+                }
+            });
+        }
+    }
+}
+</script>
+{% endblock %}

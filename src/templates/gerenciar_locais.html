@@ -1,0 +1,492 @@
+{% extends "base.html" %}
+
+{% block title %}Gerenciar Locais{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4" x-data="gerenciarLocais()">
+    <!-- Header -->
+    <div class="row mb-4 align-items-center">
+        <div class="col-md-8">
+            <h2 class="mb-0">
+                <i class="bi bi-geo-alt-fill me-2"></i>Gerenciar Locais Físicos
+            </h2>
+            <p class="text-muted mb-0">Cadastre e gerencie os locais da obra, canteiro e sede</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <button class="btn btn-primary" @click="abrirModal()">
+                <i class="bi bi-plus-circle me-2"></i>Novo Local
+            </button>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="card mb-4 shadow-sm">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <input type="text" class="form-control" placeholder="Buscar por nome ou código..."
+                           x-model="filtroBusca" @input="filtrarLocais()">
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" x-model="filtroAmbiente" @change="filtrarLocais()">
+                        <option value="">Todos os Ambientes</option>
+                        <option value="obra">Obra</option>
+                        <option value="canteiro">Canteiro</option>
+                        <option value="sede">Sede</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" x-model="filtroAtivo" @change="filtrarLocais()">
+                        <option value="">Todos os Status</option>
+                        <option value="1">Ativos</option>
+                        <option value="0">Inativos</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-outline-secondary w-100" @click="limparFiltros()">
+                        <i class="bi bi-x-circle"></i> Limpar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabela -->
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-4">Nome</th>
+                            <th>Código</th>
+                            <th>Ambiente</th>
+                            <th>Prédio</th>
+                            <th>Setor</th>
+                            <th>Tipo</th>
+                            <th>Status</th>
+                            <th class="text-end pe-4">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template x-if="locaisFiltrados.length === 0">
+                            <tr>
+                                <td colspan="8" class="text-center py-5 text-muted">
+                                    <i class="bi bi-geo-alt fs-1 d-block mb-2"></i>
+                                    Nenhum local encontrado
+                                </td>
+                            </tr>
+                        </template>
+                        <template x-for="local in locaisFiltrados" :key="local.id">
+                            <tr>
+                                <td class="ps-4">
+                                    <div class="fw-bold" x-text="local.nome"></div>
+                                </td>
+                                <td><code x-text="local.codigo"></code></td>
+                                <td>
+                                    <span class="badge"
+                                          :class="{
+                                            'bg-primary': local.ambiente === 'obra',
+                                            'bg-success': local.ambiente === 'canteiro',
+                                            'bg-secondary': local.ambiente === 'sede'
+                                          }"
+                                          x-text="local.ambiente"></span>
+                                </td>
+                                <td x-text="local.predio || '-'"></td>
+                                <td x-text="local.setor || '-'"></td>
+                                <td x-text="local.tipo_local || '-'"></td>
+                                <td>
+                                    <span class="badge"
+                                          :class="local.ativo == 1 ? 'bg-success' : 'bg-danger'"
+                                          x-text="local.ativo == 1 ? 'Ativo' : 'Inativo'"></span>
+                                </td>
+                                <td class="text-end pe-4">
+                                    <button class="btn btn-sm btn-outline-primary me-1" @click="editarLocal(local)" title="Editar">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" @click="confirmarExclusao(local)" title="Excluir">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal fade" id="modalLocal" tabindex="-1" x-ref="modalLocal">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-geo-alt me-2"></i>
+                        <span x-text="editandoId ? 'Editar Local' : 'Novo Local'"></span>
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @click="fecharModal()"></button>
+                </div>
+                <div class="modal-body">
+                    <form @submit.prevent="salvarLocal" novalidate>
+                        <div class="row g-3">
+                            <!-- Nome -->
+                            <div class="col-md-6">
+                                <label class="form-label">Nome do Local *</label>
+                                <input type="text" class="form-control" :class="{'is-invalid': erros.nome}" x-model="form.nome" placeholder="Ex: CPD TI, ALMOXARIFADO">
+                                <div class="invalid-feedback" x-show="erros.nome" x-text="erros.nome"></div>
+                            </div>
+
+                            <!-- Código -->
+                            <div class="col-md-6">
+                                <label class="form-label">Código *</label>
+                                <input type="text" class="form-control" :class="{'is-invalid': erros.codigo}" x-model="form.codigo" placeholder="Ex: TB09-TI, CAN-ALM">
+                                <div class="invalid-feedback" x-show="erros.codigo" x-text="erros.codigo"></div>
+                            </div>
+
+                            <!-- Ambiente (SEM Choices.js para evitar objeto) -->
+                            <div class="col-md-6">
+                                <label class="form-label">Ambiente *</label>
+                                <select class="form-select" :class="{'is-invalid': erros.ambiente}" x-model="form.ambiente">
+                                    <option value="">Selecione...</option>
+                                    <option value="obra">Obra (exige prédio)</option>
+                                    <option value="canteiro">Canteiro</option>
+                                    <option value="sede">Sede</option>
+                                </select>
+                                <div class="invalid-feedback d-block" x-show="erros.ambiente" x-text="erros.ambiente"></div>
+                            </div>
+
+                            <!-- Prédio (condicional - SEM Choices.js) -->
+                            <div class="col-md-6" x-show="getAmbiente() === 'obra'" x-transition>
+                                <label class="form-label">Prédio *</label>
+                                <input type="text" class="form-control" :class="{'is-invalid': erros.predio}" x-model="form.predio" placeholder="Ex: TB09, TB10">
+                                <div class="invalid-feedback" x-show="erros.predio" x-text="erros.predio"></div>
+                            </div>
+
+                            <!-- Setor (SEM Choices.js para evitar objeto) -->
+                            <div class="col-md-6">
+                                <label class="form-label">Setor *</label>
+                                <select class="form-select" :class="{'is-invalid': erros.setor}" x-model="form.setor">
+                                    <option value="">Selecione...</option>
+                                    <template x-for="setor in setores" :key="setor.id">
+                                        <option :value="setor.nome" x-text="setor.nome"></option>
+                                    </template>
+                                </select>
+                                <div class="invalid-feedback d-block" x-show="erros.setor" x-text="erros.setor"></div>
+                            </div>
+
+                            <!-- Tipo de Local (SEM Choices.js) -->
+                            <div class="col-md-6">
+                                <label class="form-label">Tipo de Local</label>
+                                <select class="form-select" x-model="form.tipo_local">
+                                    <option value="">Selecione...</option>
+                                    <option value="escritorio">Escritório</option>
+                                    <option value="ti">TI / CPD</option>
+                                    <option value="almoxarifado">Almoxarifado</option>
+                                    <option value="laboratorio">Laboratório</option>
+                                    <option value="campo">Campo / Obra</option>
+                                    <option value="canteiro">Canteiro</option>
+                                    <option value="outro">Outro</option>
+                                </select>
+                            </div>
+
+                            <!-- Status -->
+                            <div class="col-md-6">
+                                <label class="form-label">Status</label>
+                                <select class="form-select" x-model="form.ativo">
+                                    <option :value="1">Ativo</option>
+                                    <option :value="0">Inativo</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Alertas de regra de negócio -->
+                        <div class="alert alert-info mt-3 mb-0" x-show="getAmbiente() === 'obra'">
+                            <i class="bi bi-info-circle me-2"></i>
+                            <strong>Regra:</strong> Locais de ambiente "obra" exigem preenchimento do campo <strong>Prédio</strong>.
+                        </div>
+                        <div class="alert alert-warning mt-3 mb-0" x-show="getAmbiente() && getAmbiente() !== 'obra'">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            <strong>Atenção:</strong> O campo <strong>Prédio</strong> deve permanecer vazio para ambientes "canteiro" ou "sede".
+                        </div>
+
+                        <div class="mt-4 d-flex justify-content-end gap-2">
+                            <button type="button" class="btn btn-secondary" @click="fecharModal()">Cancelar</button>
+                            <button type="submit" class="btn btn-success" :disabled="salvando">
+                                <span x-show="salvando" class="spinner-border spinner-border-sm me-2"></span>
+                                <span x-text="editandoId ? 'Atualizar' : 'Cadastrar'"></span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function gerenciarLocais() {
+    return {
+        locais: [],
+        locaisFiltrados: [],
+        setores: [],
+
+        filtroBusca: '',
+        filtroAmbiente: '',
+        filtroAtivo: '',
+
+        editandoId: null,
+        salvando: false,
+        modalInstance: null,
+        erros: {},
+
+        form: {
+            nome: '',
+            codigo: '',
+            ambiente: '',
+            predio: '',
+            setor: '',
+            tipo_local: '',
+            ativo: 1
+        },
+
+        // ✅ FUNÇÃO CRÍTICA: extrai string de qualquer valor (objeto Choices.js, string, etc.)
+        getString(val) {
+            if (val === null || val === undefined) return '';
+            if (typeof val === 'string') return val;
+            if (typeof val === 'object') {
+                if ('value' in val) return String(val.value);
+                if ('id' in val) return String(val.id);
+                if ('nome' in val) return String(val.nome);
+                if ('nome_completo' in val) return String(val.nome_completo);
+                if (Array.isArray(val) && val.length > 0) return this.getString(val[0]);
+            }
+            return String(val);
+        },
+
+        // ✅ Getter seguro para o ambiente (usado no x-show)
+        getAmbiente() {
+            return this.getString(this.form.ambiente);
+        },
+
+        async init() {
+            await Promise.all([
+                this.carregarLocais(),
+                this.carregarSetores()
+            ]);
+            this.locaisFiltrados = this.locais;
+            console.log('📍 Locais carregados:', this.locais.length);
+            console.log('🏢 Setores carregados:', this.setores.length);
+        },
+
+        async carregarLocais() {
+            try {
+                const response = await fetch('/api/locais');
+                this.locais = await response.json();
+            } catch (error) {
+                console.error('Erro ao carregar locais:', error);
+                Swal.fire('Erro', 'Falha ao carregar locais', 'error');
+            }
+        },
+
+        async carregarSetores() {
+            try {
+                const response = await fetch('/api/setores?dropdown=true');
+                this.setores = await response.json();
+            } catch (error) {
+                console.error('Erro setores:', error);
+            }
+        },
+
+        filtrarLocais() {
+            this.locaisFiltrados = this.locais.filter(l => {
+                const matchBusca = !this.filtroBusca ||
+                    l.nome.toLowerCase().includes(this.filtroBusca.toLowerCase()) ||
+                    l.codigo.toLowerCase().includes(this.filtroBusca.toLowerCase());
+                const matchAmbiente = !this.filtroAmbiente || l.ambiente === this.filtroAmbiente;
+                const matchAtivo = this.filtroAtivo === '' || String(l.ativo) === this.filtroAtivo;
+                return matchBusca && matchAmbiente && matchAtivo;
+            });
+        },
+
+        limparFiltros() {
+            this.filtroBusca = '';
+            this.filtroAmbiente = '';
+            this.filtroAtivo = '';
+            this.filtrarLocais();
+        },
+
+        abrirModal() {
+            this.editandoId = null;
+            this.erros = {};
+            this.form = {
+                nome: '',
+                codigo: '',
+                ambiente: '',
+                predio: '',
+                setor: '',
+                tipo_local: '',
+                ativo: 1
+            };
+            this.showModal();
+        },
+
+        editarLocal(local) {
+            this.editandoId = local.id;
+            this.erros = {};
+            this.form = {
+                nome: local.nome || '',
+                codigo: local.codigo || '',
+                ambiente: local.ambiente || '',
+                predio: local.predio || '',
+                setor: local.setor || '',
+                tipo_local: local.tipo_local || '',
+                ativo: local.ativo !== undefined ? local.ativo : 1
+            };
+            this.showModal();
+        },
+
+        showModal() {
+            const modalEl = this.$refs.modalLocal;
+            this.modalInstance = new bootstrap.Modal(modalEl);
+            this.modalInstance.show();
+        },
+
+        fecharModal() {
+            if (this.modalInstance) {
+                this.modalInstance.hide();
+            }
+            this.editandoId = null;
+            this.erros = {};
+        },
+
+        validarFormulario() {
+            this.erros = {};
+            let valido = true;
+
+            // ✅ Usa getString() para extrair string antes de validar
+            const nome = this.getString(this.form.nome);
+            const codigo = this.getString(this.form.codigo);
+            const ambiente = this.getString(this.form.ambiente);
+            const predio = this.getString(this.form.predio);
+            const setor = this.getString(this.form.setor);
+
+            if (!nome) {
+                this.erros.nome = 'Nome é obrigatório';
+                valido = false;
+            }
+            if (!codigo) {
+                this.erros.codigo = 'Código é obrigatório';
+                valido = false;
+            }
+            if (!ambiente) {
+                this.erros.ambiente = 'Ambiente é obrigatório';
+                valido = false;
+            }
+            if (ambiente === 'obra' && !predio) {
+                this.erros.predio = 'Prédio é obrigatório para ambiente "obra"';
+                valido = false;
+            }
+            if (ambiente && ambiente !== 'obra' && predio) {
+                this.erros.predio = 'Prédio deve estar vazio para "canteiro" ou "sede"';
+                valido = false;
+            }
+            if (!setor) {
+                this.erros.setor = 'Setor é obrigatório';
+                valido = false;
+            }
+
+            return valido;
+        },
+
+        async salvarLocal() {
+            if (!this.validarFormulario()) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Verifique os campos',
+                    text: 'Existem campos obrigatórios não preenchidos ou inválidos',
+                    confirmButtonText: 'Entendi'
+                });
+                return;
+            }
+
+            this.salvando = true;
+
+            try {
+                // ✅ Extrai strings seguras de todos os campos
+                const ambiente = this.getString(this.form.ambiente);
+                const payload = {
+                    nome: this.getString(this.form.nome),
+                    codigo: this.getString(this.form.codigo),
+                    ambiente: ambiente,
+                    predio: ambiente === 'obra' ? this.getString(this.form.predio) : null,
+                    setor: this.getString(this.form.setor),
+                    tipo_local: this.getString(this.form.tipo_local) || null,
+                    ativo: parseInt(this.getString(this.form.ativo)) || 1
+                };
+
+                console.log('📦 Payload enviado:', JSON.stringify(payload, null, 2));
+
+                const url = this.editandoId ? `/api/locais/${this.editandoId}` : '/api/locais';
+                const method = this.editandoId ? 'PUT' : 'POST';
+
+                const response = await fetch(url, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    Toast.fire({ icon: 'success', title: data.mensagem });
+                    this.fecharModal();
+                    await this.carregarLocais();
+                    this.filtrarLocais();
+                } else {
+                    Swal.fire('Erro', data.erro || 'Falha ao salvar local', 'error');
+                }
+            } catch (error) {
+                console.error('Erro na requisição:', error);
+                Swal.fire('Erro', 'Falha na comunicação com o servidor', 'error');
+            } finally {
+                this.salvando = false;
+            }
+        },
+
+        confirmarExclusao(local) {
+            Swal.fire({
+                title: 'Confirmar Exclusão',
+                html: `Deseja realmente excluir o local <strong>"${local.nome}"</strong>?<br><br>
+                       <small class="text-muted">Esta ação não pode ser desfeita e falhará se houver ativos ou usuários vinculados.</small>`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Sim, excluir',
+                cancelButtonText: 'Cancelar'
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    try {
+                        const response = await fetch(`/api/locais/${local.id}`, {
+                            method: 'DELETE'
+                        });
+                        const data = await response.json();
+
+                        if (response.ok) {
+                            Toast.fire({ icon: 'success', title: data.mensagem });
+                            await this.carregarLocais();
+                            this.filtrarLocais();
+                        } else {
+                            Swal.fire('Erro', data.erro || 'Falha ao excluir', 'error');
+                        }
+                    } catch (error) {
+                        Swal.fire('Erro', 'Falha na comunicação com o servidor', 'error');
+                    }
+                }
+            });
+        }
+    }
+}
+</script>
+{% endblock %}

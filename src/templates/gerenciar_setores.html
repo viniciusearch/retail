@@ -1,0 +1,364 @@
+{% extends "base.html" %}
+
+{% block title %}Gerenciar Setores{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4" x-data="gerenciarSetores()">
+    <!-- Header -->
+    <div class="row mb-4 align-items-center">
+        <div class="col-md-8">
+            <h2 class="mb-0">
+                <i class="bi bi-diagram-3-fill me-2"></i>Gerenciar Setores
+            </h2>
+            <p class="text-muted mb-0">Cadastre e gerencie os setores/departamentos da empresa</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <button class="btn btn-primary" @click="abrirModal()">
+                <i class="bi bi-plus-circle me-2"></i>Novo Setor
+            </button>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="card mb-4 shadow-sm">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <input type="text" class="form-control" placeholder="Buscar por nome ou sigla..."
+                           x-model="filtroBusca" @input="filtrarSetores()">
+                </div>
+                <div class="col-md-4">
+                    <select class="form-select" x-model="filtroAtivo" @change="filtrarSetores()">
+                        <option value="">Todos os Status</option>
+                        <option value="1">Ativos</option>
+                        <option value="0">Inativos</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-outline-secondary w-100" @click="limparFiltros()">
+                        <i class="bi bi-x-circle"></i> Limpar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabela -->
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-4">Nome</th>
+                            <th>Sigla</th>
+                            <th>Descrição</th>
+                            <th>Status</th>
+                            <th class="text-end pe-4">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template x-if="setoresFiltrados.length === 0">
+                            <tr>
+                                <td colspan="5" class="text-center py-5 text-muted">
+                                    <i class="bi bi-diagram-3 fs-1 d-block mb-2"></i>
+                                    Nenhum setor encontrado
+                                </td>
+                            </tr>
+                        </template>
+                        <template x-for="setor in setoresFiltrados" :key="setor.id">
+                            <tr>
+                                <td class="ps-4">
+                                    <div class="fw-bold" x-text="setor.nome"></div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-secondary" x-show="setor.sigla" x-text="setor.sigla"></span>
+                                    <span class="text-muted" x-show="!setor.sigla">-</span>
+                                </td>
+                                <td x-text="setor.descricao || '-'"></td>
+                                <td>
+                                    <span class="badge"
+                                          :class="setor.ativo == 1 ? 'bg-success' : 'bg-danger'"
+                                          x-text="setor.ativo == 1 ? 'Ativo' : 'Inativo'"></span>
+                                </td>
+                                <td class="text-end pe-4">
+                                    <button class="btn btn-sm btn-outline-primary me-1" @click="editarSetor(setor)" title="Editar">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" @click="confirmarExclusao(setor)" title="Excluir">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal fade" id="modalSetor" tabindex="-1" x-ref="modalSetor">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-diagram-3 me-2"></i>
+                        <span x-text="editandoId ? 'Editar Setor' : 'Novo Setor'"></span>
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @click="fecharModal()"></button>
+                </div>
+                <div class="modal-body">
+                    <form @submit.prevent="salvarSetor" novalidate>
+                        <div class="row g-3">
+                            <!-- Nome -->
+                            <div class="col-md-8">
+                                <label class="form-label">Nome do Setor *</label>
+                                <input type="text" class="form-control" :class="{'is-invalid': erros.nome}" x-model="form.nome" placeholder="Ex: ENGENHARIA, TI, ADMINISTRATIVO">
+                                <div class="invalid-feedback" x-show="erros.nome" x-text="erros.nome"></div>
+                            </div>
+
+                            <!-- Sigla -->
+                            <div class="col-md-4">
+                                <label class="form-label">Sigla</label>
+                                <input type="text" class="form-control" x-model="form.sigla" placeholder="Ex: ENG, TI" maxlength="10" style="text-transform: uppercase;">
+                                <small class="text-muted">Automática se vazia</small>
+                            </div>
+
+                            <!-- Descrição -->
+                            <div class="col-md-12">
+                                <label class="form-label">Descrição</label>
+                                <textarea class="form-control" x-model="form.descricao" rows="3" placeholder="Descrição opcional do setor..."></textarea>
+                            </div>
+
+                            <!-- Status -->
+                            <div class="col-md-6">
+                                <label class="form-label">Status</label>
+                                <select class="form-select" x-model="form.ativo">
+                                    <option :value="1">Ativo</option>
+                                    <option :value="0">Inativo</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 d-flex justify-content-end gap-2">
+                            <button type="button" class="btn btn-secondary" @click="fecharModal()">Cancelar</button>
+                            <button type="submit" class="btn btn-success" :disabled="salvando">
+                                <span x-show="salvando" class="spinner-border spinner-border-sm me-2"></span>
+                                <span x-text="editandoId ? 'Atualizar' : 'Cadastrar'"></span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function gerenciarSetores() {
+    return {
+        setores: [],
+        setoresFiltrados: [],
+
+        filtroBusca: '',
+        filtroAtivo: '',
+
+        editandoId: null,
+        salvando: false,
+        modalInstance: null,
+        erros: {},
+
+        form: {
+            nome: '',
+            sigla: '',
+            descricao: '',
+            ativo: 1
+        },
+
+        // ✅ Helper: extrai string de qualquer valor (proteção contra Choices.js)
+        getString(val) {
+            if (val === null || val === undefined) return '';
+            if (typeof val === 'string') return val;
+            if (typeof val === 'object') {
+                if ('value' in val) return String(val.value);
+                if ('id' in val) return String(val.id);
+                if ('nome' in val) return String(val.nome);
+            }
+            return String(val);
+        },
+
+        async init() {
+            await this.carregarSetores();
+            this.setoresFiltrados = this.setores;
+            console.log('🏢 Setores carregados:', this.setores.length);
+        },
+
+        async carregarSetores() {
+            try {
+                const response = await fetch('/api/setores');
+                this.setores = await response.json();
+            } catch (error) {
+                console.error('Erro ao carregar setores:', error);
+                Swal.fire('Erro', 'Falha ao carregar setores', 'error');
+            }
+        },
+
+        filtrarSetores() {
+            this.setoresFiltrados = this.setores.filter(s => {
+                const matchBusca = !this.filtroBusca ||
+                    s.nome.toLowerCase().includes(this.filtroBusca.toLowerCase()) ||
+                    (s.sigla && s.sigla.toLowerCase().includes(this.filtroBusca.toLowerCase()));
+                const matchAtivo = this.filtroAtivo === '' || String(s.ativo) === this.filtroAtivo;
+                return matchBusca && matchAtivo;
+            });
+        },
+
+        limparFiltros() {
+            this.filtroBusca = '';
+            this.filtroAtivo = '';
+            this.filtrarSetores();
+        },
+
+        abrirModal() {
+            this.editandoId = null;
+            this.erros = {};
+            this.form = {
+                nome: '',
+                sigla: '',
+                descricao: '',
+                ativo: 1
+            };
+            this.showModal();
+        },
+
+        editarSetor(setor) {
+            this.editandoId = setor.id;
+            this.erros = {};
+            this.form = {
+                nome: setor.nome || '',
+                sigla: setor.sigla || '',
+                descricao: setor.descricao || '',
+                ativo: setor.ativo !== undefined ? setor.ativo : 1
+            };
+            this.showModal();
+        },
+
+        showModal() {
+            const modalEl = this.$refs.modalSetor;
+            this.modalInstance = new bootstrap.Modal(modalEl);
+            this.modalInstance.show();
+        },
+
+        fecharModal() {
+            if (this.modalInstance) {
+                this.modalInstance.hide();
+            }
+            this.editandoId = null;
+            this.erros = {};
+        },
+
+        validarFormulario() {
+            this.erros = {};
+            let valido = true;
+
+            const nome = this.getString(this.form.nome).trim();
+            if (!nome) {
+                this.erros.nome = 'Nome é obrigatório';
+                valido = false;
+            }
+
+            return valido;
+        },
+
+        async salvarSetor() {
+            if (!this.validarFormulario()) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Verifique os campos',
+                    text: 'Existem campos obrigatórios não preenchidos',
+                    confirmButtonText: 'Entendi'
+                });
+                return;
+            }
+
+            this.salvando = true;
+
+            try {
+                const nome = this.getString(this.form.nome).trim();
+                const sigla = this.getString(this.form.sigla).trim().toUpperCase() || null;
+                const descricao = this.getString(this.form.descricao).trim() || null;
+                const ativo = parseInt(this.getString(this.form.ativo)) || 1;
+
+                const payload = {
+                    nome: nome,
+                    sigla: sigla,
+                    descricao: descricao,
+                    ativo: ativo
+                };
+
+                console.log('📦 Payload enviado:', JSON.stringify(payload, null, 2));
+
+                const url = this.editandoId ? `/api/setores/${this.editandoId}` : '/api/setores';
+                const method = this.editandoId ? 'PUT' : 'POST';
+
+                const response = await fetch(url, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    Toast.fire({ icon: 'success', title: data.mensagem });
+                    this.fecharModal();
+                    await this.carregarSetores();
+                    this.filtrarSetores();
+                } else {
+                    Swal.fire('Erro', data.erro || 'Falha ao salvar setor', 'error');
+                }
+            } catch (error) {
+                console.error('Erro na requisição:', error);
+                Swal.fire('Erro', 'Falha na comunicação com o servidor', 'error');
+            } finally {
+                this.salvando = false;
+            }
+        },
+
+        confirmarExclusao(setor) {
+            Swal.fire({
+                title: 'Confirmar Exclusão',
+                html: `Deseja realmente excluir o setor <strong>"${setor.nome}"</strong>?<br><br>
+                       <small class="text-muted">A exclusão falhará se houver usuários ou solicitações vinculadas.</small>`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Sim, excluir',
+                cancelButtonText: 'Cancelar'
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    try {
+                        const response = await fetch(`/api/setores/${setor.id}`, {
+                            method: 'DELETE'
+                        });
+                        const data = await response.json();
+
+                        if (response.ok) {
+                            Toast.fire({ icon: 'success', title: data.mensagem });
+                            await this.carregarSetores();
+                            this.filtrarSetores();
+                        } else {
+                            Swal.fire('Erro', data.erro || 'Falha ao excluir', 'error');
+                        }
+                    } catch (error) {
+                        Swal.fire('Erro', 'Falha na comunicação com o servidor', 'error');
+                    }
+                }
+            });
+        }
+    }
+}
+</script>
+{% endblock %}

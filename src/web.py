@@ -24,7 +24,7 @@ def init_flask_login():
 
 def get_db_connection():
     """Conexão com o banco de dados"""
-    db_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'equipamentos_v2.db')
+    db_path = os.path.join(os.path.dirname(__file__), 'data', 'equipamentos_v3.db')
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     return conn
@@ -351,3 +351,15 @@ def cadastrar_compat():
 @login_required_wrapper
 def lote_compat():
     return redirect(url_for('web.upload_lote'))
+
+@web_bp.route('/locais')
+@login_required_wrapper
+def gerenciar_locais():
+    """Página de gerenciamento de locais físicos"""
+    return render_template('gerenciar_locais.html')
+
+@web_bp.route('/setores')
+@login_required_wrapper
+def gerenciar_setores():
+    """Página de gerenciamento de setores"""
+    return render_template('gerenciar_setores.html')

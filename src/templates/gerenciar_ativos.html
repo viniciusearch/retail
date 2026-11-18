@@ -1,407 +1,623 @@
 {% extends "base.html" %}
 
-{% block title %}Gerenciar Ativos - Gestão de Ativos{% endblock %}
-
-{% block extra_css %}
-<style>
-  .table-container {
-    overflow-x: auto;
-  }
-  
-  .status-em-uso { 
-    background-color: #d4edda; 
-    color: #155724; 
-    padding: 4px 8px; 
-    border-radius: 4px; 
-    font-weight: bold;
-  }
-  
-  .status-devolvido { 
-    background-color: #d1ecf1; 
-    color: #0c5460; 
-    padding: 4px 8px; 
-    border-radius: 4px; 
-    font-weight: bold;
-  }
-  
-  .status-desmobilizado { 
-    background-color: #f8d7da; 
-    color: #721c24; 
-    padding: 4px 8px; 
-    border-radius: 4px; 
-    font-weight: bold;
-  }
-  
-  .filter-section {
-    background: #f8f9fa;
-    padding: 15px;
-    border-radius: 8px;
-    margin-bottom: 20px;
-  }
-  
-  .action-buttons {
-    white-space: nowrap;
-  }
-  
-  .btn-sm {
-    padding: 4px 8px;
-    font-size: 0.8rem;
-  }
-</style>
-{% endblock %}
+{% block title %}Gerenciar Ativos{% endblock %}
 
 {% block content %}
-<header class="d-flex justify-content-between align-items-center mb-4">
-  <h2 class="mb-0"><i class="bi bi-table me-2"></i>Gerenciar Ativos</h2>
-  <div class="d-flex gap-2">
-    <a href="/ativos/cadastrar" class="btn btn-primary">
-      <i class="bi bi-plus-circle me-1"></i> Cadastrar Ativo
-    </a>
-    <button class="btn btn-outline-secondary" onclick="exportarCSV()">
-      <i class="bi bi-file-earmark-arrow-down me-1"></i> Exportar CSV
-    </button>
-  </div>
-</header>
-
-<!-- Filtros -->
-<div class="filter-section">
-  <div class="row g-3">
-    <div class="col-md-3">
-      <label class="form-label">Tipo de Ativo</label>
-      <select class="form-select" id="filtro-tipo-ativo">
-        <option value="">Todos</option>
-        <option value="hardware">Hardware</option>
-        <option value="periferico">Periférico</option>
-        <option value="software">Software</option>
-        <option value="mobiliario">Mobiliário</option>
-        <option value="rede">Rede</option>
-      </select>
-    </div>
-    
-    <div class="col-md-3">
-      <label class="form-label">Status</label>
-      <select class="form-select" id="filtro-status">
-        <option value="">Todos</option>
-        <option value="Em uso">Em uso</option>
-        <option value="Devolvido">Devolvido</option>
-        <option value="Desmobilizado">Desmobilizado</option>
-      </select>
-    </div>
-    
-    <div class="col-md-3">
-      <label class="form-label">Local</label>
-      <select class="form-select" id="filtro-local">
-        <option value="">Todos</option>
-        <!-- Será preenchido dinamicamente -->
-      </select>
-    </div>
-    
-    <div class="col-md-3">
-      <label class="form-label">Pesquisa Rápida</label>
-      <input type="text" class="form-control" id="pesquisa-rapida" placeholder="Código, descrição...">
-    </div>
-  </div>
-</div>
-
-<!-- Tabela de Ativos -->
-<div class="table-container">
-  <table id="tabela-ativos" class="table table-striped table-hover">
-    <thead>
-      <tr>
-        <th>Código</th>
-        <th>Tipo</th>
-        <th>Categoria</th>
-        <th>Descrição</th>
-        <th>Status</th>
-        <th>Proprietário</th>
-        <th>Usuário</th>
-        <th>Local</th>
-        <th>Projeto</th>
-        <th class="action-buttons">Ações</th>
-      </tr>
-    </thead>
-    <tbody id="corpo-tabela">
-      <tr>
-        <td colspan="10" class="text-center">
-          <div class="spinner-border spinner-border-sm" role="status">
-            <span class="visually-hidden">Carregando...</span>
-          </div>
-          Carregando ativos...
-        </td>
-      </tr>
-    </tbody>
-  </table>
-</div>
-
-<!-- Modal de Detalhes -->
-<div class="modal fade" id="modalDetalhes" tabindex="-1" aria-labelledby="modalDetalhesLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="modalDetalhesLabel">Detalhes do Ativo</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
-      </div>
-      <div class="modal-body" id="conteudo-detalhes">
-        <div class="text-center py-4">
-          <div class="spinner-border" role="status">
-            <span class="visually-hidden">Carregando...</span>
-          </div>
+<div class="container-fluid mt-4" x-data="gerenciarAtivos()">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2 class="mb-0">
+                <i class="bi bi-laptop me-2"></i>Gerenciar Ativos
+            </h2>
+            <p class="text-muted mb-0">Cadastre e gerencie todos os equipamentos do sistema</p>
         </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
-        <a href="#" class="btn btn-primary" id="btn-editar-ativo">Editar Ativo</a>
-      </div>
+        <div class="col-md-4 text-end">
+            <button class="btn btn-primary" @click="abrirModal()">
+                <i class="bi bi-plus-circle me-2"></i>Novo Ativo
+            </button>
+        </div>
     </div>
-  </div>
+
+    <!-- Filtros -->
+    <div class="card mb-4 shadow-sm">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <input type="text" class="form-control" placeholder="Buscar por código ou descrição..."
+                           x-model="filtroBusca" @input="filtrarAtivos()">
+                </div>
+                <div class="col-md-2">
+                    <select class="form-select" x-model="filtroTipo" @change="filtrarAtivos()">
+                        <option value="">Todos os Tipos</option>
+                        <option value="hardware">Hardware</option>
+                        <option value="periferico">Periférico</option>
+                        <option value="rede">Rede</option>
+                        <option value="software">Software</option>
+                        <option value="mobiliario">Mobiliário</option>
+                        <option value="radio">Rádio/Walkie-Talkie</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select class="form-select" x-model="filtroStatus" @change="filtrarAtivos()">
+                        <option value="">Todos os Status</option>
+                        <option value="Em uso">Em uso</option>
+                        <option value="Devolvido">Devolvido</option>
+                        <option value="Desmobilizado">Desmobilizado</option>
+                        <option value="Em Estoque">Em Estoque</option>
+                        <option value="Com Defeito">Com Defeito</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select class="form-select" x-model="filtroProprietario" @change="filtrarAtivos()">
+                        <option value="">Todos os Proprietários</option>
+                        <template x-for="emp in empresas" :key="emp.id">
+                            <option :value="emp.nome" x-text="emp.nome"></option>
+                        </template>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <button class="btn btn-outline-secondary w-100" @click="limparFiltros()">
+                        <i class="bi bi-x-circle me-2"></i>Limpar Filtros
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabela -->
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-4">Código</th>
+                            <th>Descrição</th>
+                            <th>Tipo</th>
+                            <th>Categoria</th>
+                            <th>Status</th>
+                            <th>Proprietário</th>
+                            <th>Usuário</th>
+                            <th>Local</th>
+                            <th class="text-end pe-4">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template x-if="ativosFiltrados.length === 0">
+                            <tr>
+                                <td colspan="9" class="text-center py-5 text-muted">
+                                    <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                                    Nenhum ativo encontrado
+                                </td>
+                            </tr>
+                        </template>
+                        <template x-for="ativo in ativosFiltrados" :key="ativo.id">
+                            <tr>
+                                <td class="ps-4">
+                                    <div class="fw-bold" x-text="ativo.codigo_ativo"></div>
+                                    <small class="text-muted" x-show="ativo.patrimonio" x-text="'Pat: ' + ativo.patrimonio"></small>
+                                </td>
+                                <td>
+                                    <div x-text="ativo.descricao"></div>
+                                    <small class="text-muted" x-show="ativo.numero_serie" x-text="'SN: ' + ativo.numero_serie"></small>
+                                </td>
+                                <td><span class="badge bg-info" x-text="ativo.tipo_ativo"></span></td>
+                                <td x-text="ativo.categoria"></td>
+                                <td>
+                                    <span class="badge"
+                                          :class="{
+                                            'bg-success': ativo.status === 'Em uso',
+                                            'bg-secondary': ativo.status === 'Devolvido',
+                                            'bg-danger': ativo.status === 'Desmobilizado',
+                                            'bg-warning text-dark': ativo.status === 'Em Estoque',
+                                            'bg-info': ativo.status === 'Transferido',
+                                            'bg-primary': ativo.status === 'Em Manutenção'
+                                          }"
+                                          x-text="ativo.status"></span>
+                                </td>
+                                <td x-text="ativo.proprietario_nome || '-'"></td>
+                                <td x-text="ativo.usuario_nome || '-'"></td>
+                                <td x-text="ativo.local_nome || '-'"></td>
+                                <td class="text-end pe-4">
+                                    <button class="btn btn-sm btn-outline-primary me-1" @click="editarAtivo(ativo)" title="Editar">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" @click="confirmarExclusao(ativo)" title="Excluir">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal fade" id="modalAtivo" tabindex="-1" x-ref="modalAtivo">
+        <div class="modal-dialog modal-xl modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-laptop me-2"></i>
+                        <span x-text="editandoId ? 'Editar Ativo' : 'Novo Ativo'"></span>
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @click="fecharModal()"></button>
+                </div>
+                <div class="modal-body">
+                    <form @submit.prevent="salvarAtivo" novalidate>
+
+                        <!-- Identificação -->
+                        <h6 class="text-muted mb-3 border-bottom pb-2">Identificação Principal</h6>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-4">
+                                <label class="form-label">Código do Ativo *</label>
+                                <input type="text" class="form-control" :class="{'is-invalid': erros.codigo_ativo}" x-model="form.codigo_ativo" placeholder="Ex: NB-CTC-001">
+                                <div class="invalid-feedback" x-show="erros.codigo_ativo" x-text="erros.codigo_ativo"></div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Patrimônio</label>
+                                <input type="text" class="form-control" x-model="form.patrimonio" placeholder="Ex: 7720">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Número de Série</label>
+                                <input type="text" class="form-control" x-model="form.numero_serie" placeholder="Ex: AF12502354461">
+                            </div>
+                        </div>
+
+                        <!-- Classificação -->
+                        <h6 class="text-muted mb-3 border-bottom pb-2">Classificação</h6>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-4">
+                                <label class="form-label">Tipo de Ativo *</label>
+                                <select class="form-select" :class="{'is-invalid': erros.tipo_ativo}" x-model="form.tipo_ativo">
+                                    <option value="">Selecione...</option>
+                                    <option value="hardware">Hardware</option>
+                                    <option value="periferico">Periférico</option>
+                                    <option value="rede">Rede</option>
+                                    <option value="software">Software</option>
+                                    <option value="mobiliario">Mobiliário</option>
+                                    <option value="radio">Rádio/Walkie-Talkie</option>
+                                </select>
+                                <div class="invalid-feedback d-block" x-show="erros.tipo_ativo" x-text="erros.tipo_ativo"></div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Categoria *</label>
+                                <input type="text" class="form-control" :class="{'is-invalid': erros.categoria}" x-model="form.categoria" placeholder="Ex: Notebook, Monitor">
+                                <div class="invalid-feedback" x-show="erros.categoria" x-text="erros.categoria"></div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Status *</label>
+                                <select class="form-select" x-model="form.status">
+                                    <option value="Em uso">Em uso</option>
+                                    <option value="Devolvido">Devolvido</option>
+                                    <option value="Desmobilizado">Desmobilizado</option>
+                                    <option value="Em Estoque">Em Estoque</option>
+                                    <option value="Com Defeito">Com Defeito</option>
+                                    <option value="Transferido">Transferido</option>
+                                    <option value="Em Manutenção">Em Manutenção</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Detalhes -->
+                        <h6 class="text-muted mb-3 border-bottom pb-2">Detalhes e Localização</h6>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-12">
+                                <label class="form-label">Descrição Completa</label>
+                                <input type="text" class="form-control" x-model="form.descricao" placeholder="Ex: LENOVO THINKPAD E14 I5 16GB">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Proprietário (Empresa) *</label>
+                                <select class="form-select modal-choices" :class="{'is-invalid': erros.proprietario_id}" x-model="form.proprietario_id" data-field="proprietario_id">
+                                    <option value="">Selecione...</option>
+                                    <template x-for="emp in empresas" :key="emp.id">
+                                        <option :value="emp.id" x-text="emp.nome"></option>
+                                    </template>
+                                </select>
+                                <div class="invalid-feedback d-block" x-show="erros.proprietario_id" x-text="erros.proprietario_id"></div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Usuário Atual</label>
+                                <select class="form-select modal-choices" :class="{'is-invalid': erros.usuario_atual_id}" x-model="form.usuario_atual_id" data-field="usuario_atual_id">
+                                    <option value="">Disponível</option>
+                                    <template x-for="user in usuarios" :key="user.id">
+                                        <option :value="user.id" x-text="user.nome_completo"></option>
+                                    </template>
+                                </select>
+                                <div class="invalid-feedback d-block" x-show="erros.usuario_atual_id" x-text="erros.usuario_atual_id"></div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Local Atual</label>
+                                <select class="form-select modal-choices" x-model="form.local_atual_id" data-field="local_atual_id">
+                                    <option value="">Selecione...</option>
+                                    <template x-for="loc in locais" :key="loc.id">
+                                        <option :value="loc.id" x-text="loc.nome"></option>
+                                    </template>
+                                </select>
+                            </div>
+                            <div class="col-md-12">
+                                <label class="form-label">Projeto / Obra</label>
+                                <input type="text" class="form-control" x-model="form.projeto" placeholder="Ex: SCALA DATACENTER TB09">
+                            </div>
+                        </div>
+
+                        <!-- Atributos -->
+                        <h6 class="text-muted mb-3 border-bottom pb-2">Atributos Específicos (Opcional)</h6>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-3">
+                                <label class="form-label">Marca</label>
+                                <input type="text" class="form-control" x-model="atributos.marca">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Modelo</label>
+                                <input type="text" class="form-control" x-model="atributos.modelo">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">IMEI (Celulares/Rádios)</label>
+                                <input type="text" class="form-control" x-model="atributos.imei">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Hostname (TI)</label>
+                                <input type="text" class="form-control" x-model="atributos.host_name">
+                            </div>
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-md-12">
+                                <label class="form-label">Observações</label>
+                                <textarea class="form-control" x-model="form.observacoes" rows="2"></textarea>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 d-flex justify-content-end gap-2">
+                            <button type="button" class="btn btn-secondary" @click="fecharModal()">Cancelar</button>
+                            <button type="submit" class="btn btn-success" :disabled="salvando">
+                                <span x-show="salvando" class="spinner-border spinner-border-sm me-2"></span>
+                                <span x-text="editandoId ? 'Atualizar' : 'Cadastrar'"></span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
-<!-- Loading Overlay -->
-<div id="loading-overlay" class="position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-25 d-none" style="z-index: 1000;">
-  <div class="position-absolute top-50 start-50 translate-middle">
-    <div class="spinner-border text-primary" role="status">
-      <span class="visually-hidden">Carregando...</span>
-    </div>
-  </div>
-</div>
-{% endblock %}
-
-{% block extra_js %}
 <script>
-  // Dados em cache para performance
-  let ativosCache = [];
-  let locaisCache = [];
-  
-  // Função para carregar ativos
-  async function carregarAtivos() {
-    try {
-      document.getElementById('loading-overlay').classList.remove('d-none');
-      
-      const response = await fetch('/api/ativos');
-      const ativos = await response.json();
-      
-      ativosCache = ativos;
-      renderizarTabela(ativos);
-      
-    } catch (error) {
-      console.error('Erro ao carregar ativos:', error);
-      document.getElementById('corpo-tabela').innerHTML = `
-        <tr>
-          <td colspan="10" class="text-center text-danger">
-            <i class="bi bi-exclamation-triangle me-2"></i>
-            Erro ao carregar ativos. Verifique sua conexão.
-          </td>
-        </tr>
-      `;
-    } finally {
-      document.getElementById('loading-overlay').classList.add('d-none');
-    }
-  }
-  
-  // Função para carregar locais (para filtros)
-  async function carregarLocais() {
-    try {
-      const response = await fetch('/api/locais');
-      const locais = await response.json();
-      
-      locaisCache = locais;
-      const selectLocal = document.getElementById('filtro-local');
-      selectLocal.innerHTML = '<option value="">Todos</option>';
-      
-      locais.forEach(local => {
-        const option = document.createElement('option');
-        option.value = local.id;
-        option.textContent = local.nome;
-        selectLocal.appendChild(option);
-      });
-      
-    } catch (error) {
-      console.error('Erro ao carregar locais:', error);
-    }
-  }
-  
-  // Função para renderizar a tabela
-  function renderizarTabela(ativos) {
-    const tbody = document.getElementById('corpo-tabela');
-    
-    if (ativos.length === 0) {
-      tbody.innerHTML = `
-        <tr>
-          <td colspan="10" class="text-center text-muted">
-            <i class="bi bi-folder-plus me-2"></i>
-            Nenhum ativo encontrado com os filtros aplicados.
-          </td>
-        </tr>
-      `;
-      return;
-    }
-    
-    let html = '';
-    ativos.forEach(ativo => {
-      const statusClass = 
-        ativo.status === 'Em uso' ? 'status-em-uso' : 
-        ativo.status === 'Devolvido' ? 'status-devolvido' : 'status-desmobilizado';
-      
-      html += `
-        <tr>
-          <td><strong>${ativo.codigo_ativo}</strong></td>
-          <td>${ativo.tipo_ativo}</td>
-          <td>${ativo.categoria}</td>
-          <td>${ativo.descricao || '-'}</td>
-          <td><span class="${statusClass}">${ativo.status}</span></td>
-          <td>${ativo.proprietario_nome || '-'}</td>
-          <td>${ativo.usuario_nome || '-'}</td>
-          <td>${ativo.local_nome || '-'}</td>
-          <td>${ativo.projeto || '-'}</td>
-          <td class="action-buttons">
-            <button class="btn btn-sm btn-outline-primary" onclick="mostrarDetalhes(${ativo.id})">
-              <i class="bi bi-eye"></i>
-            </button>
-            <button class="btn btn-sm btn-outline-secondary" onclick="editarAtivo(${ativo.id})">
-              <i class="bi bi-pencil"></i>
-            </button>
-          </td>
-        </tr>
-      `;
-    });
-    
-    tbody.innerHTML = html;
-  }
-  
-  // Função para aplicar filtros
-  function aplicarFiltros() {
-    const tipoAtivo = document.getElementById('filtro-tipo-ativo').value;
-    const status = document.getElementById('filtro-status').value;
-    const localId = document.getElementById('filtro-local').value;
-    const pesquisa = document.getElementById('pesquisa-rapida').value.toLowerCase();
-    
-    let ativosFiltrados = ativosCache.filter(ativo => {
-      // Filtro por tipo de ativo
-      if (tipoAtivo && ativo.tipo_ativo !== tipoAtivo) {
-        return false;
-      }
-      
-      // Filtro por status
-      if (status && ativo.status !== status) {
-        return false;
-      }
-      
-      // Filtro por local
-      if (localId && ativo.local_atual_id != localId) {
-        return false;
-      }
-      
-      // Pesquisa rápida
-      if (pesquisa) {
-        const camposPesquisa = [
-          ativo.codigo_ativo,
-          ativo.descricao,
-          ativo.usuario_nome,
-          ativo.local_nome,
-          ativo.projeto
-        ].join(' ').toLowerCase();
-        
-        if (!camposPesquisa.includes(pesquisa)) {
-          return false;
+function gerenciarAtivos() {
+    return {
+        ativos: [],
+        ativosFiltrados: [],
+        empresas: [],
+        usuarios: [],
+        locais: [],
+
+        filtroBusca: '',
+        filtroTipo: '',
+        filtroStatus: '',
+        filtroProprietario: '',
+
+        editandoId: null,
+        salvando: false,
+        modalInstance: null,
+        erros: {},
+
+        form: {
+            codigo_ativo: '',
+            patrimonio: '',
+            numero_serie: '',
+            tipo_ativo: '',
+            categoria: '',
+            descricao: '',
+            status: 'Devolvido',
+            proprietario_id: '',
+            usuario_atual_id: '',
+            local_atual_id: '',
+            projeto: '',
+            observacoes: ''
+        },
+
+        atributos: {
+            marca: '',
+            modelo: '',
+            imei: '',
+            host_name: ''
+        },
+
+        async init() {
+            // 1. Carrega todos os dados necessários
+            await Promise.all([
+                this.carregarAtivos(),
+                this.carregarEmpresas(),
+                this.carregarUsuarios(),
+                this.carregarLocais()
+            ]);
+            this.ativosFiltrados = this.ativos;
+        },
+
+        // ✅ MÉTODO SIMPLIFICADO E ROBUSTO
+        inicializarChoicesNoModal() {
+            const modalEl = this.$refs.modalAtivo;
+            if (!modalEl) return;
+
+            // Destrói instâncias antigas para evitar duplicação ou estados travados
+            modalEl.querySelectorAll('select.modal-choices').forEach(el => {
+                window.destroyChoices(el);
+            });
+
+            // $nextTick garante que o Alpine.js terminou de renderizar as <option> do x-for
+            this.$nextTick(() => {
+                // Pequeno delay para garantir que o Bootstrap também finalizou a transição de abertura do modal
+                setTimeout(() => {
+                    modalEl.querySelectorAll('select.modal-choices').forEach(select => {
+                        // Inicializa o Choices.js
+                        window.initChoices(select);
+                        
+                        // Define o valor selecionado se existir no form
+                        if (select.choicesInstance) {
+                            const fieldName = select.dataset.field;
+                            const fieldValue = this.form[fieldName];
+                            if (fieldValue !== undefined && fieldValue !== '' && fieldValue !== null) {
+                                try {
+                                    select.choicesInstance.setChoiceByValue(String(fieldValue));
+                                } catch (e) {
+                                    console.warn('Falha ao definir valor no Choices:', fieldName, e);
+                                }
+                            }
+                        }
+                    });
+                }, 100); // 100ms é o sweet spot para Alpine + Bootstrap Modal
+            });
+        },
+
+        async carregarAtivos() {
+            try {
+                const response = await fetch('/api/ativos');
+                this.ativos = await response.json();
+            } catch (error) {
+                console.error('Erro ao carregar ativos:', error);
+            }
+        },
+
+        async carregarEmpresas() {
+            try {
+                const response = await fetch('/api/empresas?dropdown=true');
+                this.empresas = await response.json();
+                console.log('✅ Empresas carregadas:', this.empresas.length);
+            } catch (error) { console.error('Erro empresas:', error); }
+        },
+
+        async carregarUsuarios() {
+            try {
+                const response = await fetch('/api/usuarios?dropdown=true');
+                this.usuarios = await response.json();
+                console.log('✅ Usuários carregados:', this.usuarios.length, this.usuarios);
+            } catch (error) { console.error('Erro usuários:', error); }
+        },
+
+        async carregarLocais() {
+            try {
+                const response = await fetch('/api/locais?dropdown=true');
+                this.locais = await response.json();
+                console.log('✅ Locais carregados:', this.locais.length);
+            } catch (error) { console.error('Erro locais:', error); }
+        },
+
+        filtrarAtivos() {
+            this.ativosFiltrados = this.ativos.filter(a => {
+                const matchBusca = !this.filtroBusca ||
+                    a.codigo_ativo.toLowerCase().includes(this.filtroBusca.toLowerCase()) ||
+                    (a.descricao && a.descricao.toLowerCase().includes(this.filtroBusca.toLowerCase()));
+                const matchTipo = !this.filtroTipo || a.tipo_ativo === this.filtroTipo;
+                const matchStatus = !this.filtroStatus || a.status === this.filtroStatus;
+                const matchProprietario = !this.filtroProprietario || a.proprietario_nome === this.filtroProprietario;
+                return matchBusca && matchTipo && matchStatus && matchProprietario;
+            });
+        },
+
+        limparFiltros() {
+            this.filtroBusca = '';
+            this.filtroTipo = '';
+            this.filtroStatus = '';
+            this.filtroProprietario = '';
+            this.filtrarAtivos();
+        },
+
+        abrirModal() {
+            this.editandoId = null;
+            this.erros = {};
+            this.form = {
+                codigo_ativo: '', patrimonio: '', numero_serie: '', tipo_ativo: '',
+                categoria: '', descricao: '', status: 'Devolvido', proprietario_id: '',
+                usuario_atual_id: '', local_atual_id: '', projeto: '', observacoes: ''
+            };
+            this.atributos = { marca: '', modelo: '', imei: '', host_name: '' };
+            this.showModal();
+        },
+
+        async editarAtivo(ativo) {
+            this.editandoId = ativo.id;
+            this.erros = {};
+            this.form = {
+                codigo_ativo: ativo.codigo_ativo,
+                patrimonio: ativo.patrimonio || '',
+                numero_serie: ativo.numero_serie || '',
+                tipo_ativo: ativo.tipo_ativo,
+                categoria: ativo.categoria,
+                descricao: ativo.descricao || '',
+                status: ativo.status,
+                proprietario_id: ativo.proprietario_id || '',
+                usuario_atual_id: ativo.usuario_atual_id || '',
+                local_atual_id: ativo.local_atual_id || '',
+                projeto: ativo.projeto || '',
+                observacoes: ativo.observacoes || ''
+            };
+
+            try {
+                const response = await fetch(`/api/ativos/${ativo.id}/atributos`);
+                const data = await response.json();
+                this.atributos = {
+                    marca: data.marca || '', modelo: data.modelo || '',
+                    imei: data.imei || '', host_name: data.host_name || ''
+                };
+            } catch (error) {
+                this.atributos = { marca: '', modelo: '', imei: '', host_name: '' };
+            }
+
+            this.showModal();
+        },
+
+        showModal() {
+            const modalEl = this.$refs.modalAtivo;
+
+            // Abre o modal do Bootstrap
+            this.modalInstance = new bootstrap.Modal(modalEl);
+            this.modalInstance.show();
+
+            // Aciona a inicialização segura dos selects
+            this.inicializarChoicesNoModal();
+        },
+
+        fecharModal() {
+            if (this.modalInstance) {
+                this.modalInstance.hide();
+            }
+            this.editandoId = null;
+            this.erros = {};
+        },
+
+        validarFormulario() {
+            this.erros = {};
+            let valido = true;
+
+            if (!this.form.codigo_ativo || this.form.codigo_ativo.trim() === '') {
+                this.erros.codigo_ativo = 'Código do ativo é obrigatório'; valido = false;
+            }
+            if (!this.form.tipo_ativo || this.form.tipo_ativo === '') {
+                this.erros.tipo_ativo = 'Tipo de ativo é obrigatório'; valido = false;
+            }
+            if (!this.form.categoria || this.form.categoria.trim() === '') {
+                this.erros.categoria = 'Categoria é obrigatória'; valido = false;
+            }
+            if (!this.form.proprietario_id || this.form.proprietario_id === '') {
+                this.erros.proprietario_id = 'Proprietário é obrigatório'; valido = false;
+            }
+            if (this.form.status === 'Em uso' && (!this.form.usuario_atual_id || this.form.usuario_atual_id === '')) {
+                this.erros.usuario_atual_id = 'Ativos "Em uso" devem ter um usuário vinculado'; valido = false;
+            }
+
+            return valido;
+        },
+
+        async salvarAtivo() {
+            if (!this.validarFormulario()) {
+                Swal.fire({ icon: 'warning', title: 'Verifique os campos', text: 'Existem campos obrigatórios não preenchidos', confirmButtonText: 'Entendi' });
+                return;
+            }
+
+            this.salvando = true;
+
+            try {
+                // Sanitização robusta contra objetos do Choices.js
+                const sanitizar = (val) => {
+                    if (val === null || val === undefined) return null;
+                    if (typeof val === 'object') {
+                        if ('value' in val) return sanitizar(val.value);
+                        if ('id' in val) return sanitizar(val.id);
+                        if (Array.isArray(val) && val.length === 1) return sanitizar(val[0]);
+                        if (Array.isArray(val) && val.length === 0) return null;
+                        return String(val);
+                    }
+                    return val;
+                };
+
+                const payload = {
+                    codigo_ativo: sanitizar(this.form.codigo_ativo),
+                    patrimonio: sanitizar(this.form.patrimonio),
+                    numero_serie: sanitizar(this.form.numero_serie),
+                    tipo_ativo: sanitizar(this.form.tipo_ativo),
+                    categoria: sanitizar(this.form.categoria),
+                    descricao: sanitizar(this.form.descricao),
+                    status: sanitizar(this.form.status),
+                    proprietario_id: sanitizar(this.form.proprietario_id),
+                    usuario_atual_id: sanitizar(this.form.usuario_atual_id),
+                    local_atual_id: sanitizar(this.form.local_atual_id),
+                    projeto: sanitizar(this.form.projeto),
+                    observacoes: sanitizar(this.form.observacoes),
+                    atributos: {}
+                };
+
+                for (const [key, value] of Object.entries(this.atributos)) {
+                    if (value && String(value).trim() !== '') {
+                        payload.atributos[key] = String(value);
+                    }
+                }
+                if (Object.keys(payload.atributos).length === 0) {
+                    delete payload.atributos;
+                }
+
+                console.log('📦 Payload enviado:', JSON.stringify(payload, null, 2));
+
+                const url = this.editandoId ? `/api/ativos/${this.editandoId}` : '/api/ativos';
+                const method = this.editandoId ? 'PATCH' : 'POST';
+
+                const response = await fetch(url, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    Toast.fire({ icon: 'success', title: data.mensagem });
+                    this.fecharModal();
+                    await this.carregarAtivos();
+                    this.filtrarAtivos();
+                } else {
+                    Swal.fire('Erro', data.erro || 'Falha ao salvar ativo', 'error');
+                }
+            } catch (error) {
+                console.error('Erro na requisição:', error);
+                Swal.fire('Erro', 'Falha na comunicação com o servidor', 'error');
+            } finally {
+                this.salvando = false;
+            }
+        },
+
+        confirmarExclusao(ativo) {
+            Swal.fire({
+                title: 'Confirmar Exclusão',
+                text: `Deseja realmente excluir o ativo "${ativo.codigo_ativo}"? Esta ação não pode ser desfeita.`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Sim, excluir',
+                cancelButtonText: 'Cancelar'
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    try {
+                        const response = await fetch(`/api/ativos/${ativo.id}`, { method: 'DELETE' });
+                        const data = await response.json();
+
+                        if (response.ok) {
+                            Toast.fire({ icon: 'success', title: data.mensagem });
+                            await this.carregarAtivos();
+                            this.filtrarAtivos();
+                        } else {
+                            Swal.fire('Erro', data.erro || 'Falha ao excluir', 'error');
+                        }
+                    } catch (error) {
+                        Swal.fire('Erro', 'Falha na comunicação com o servidor', 'error');
+                    }
+                }
+            });
         }
-      }
-      
-      return true;
-    });
-    
-    renderizarTabela(ativosFiltrados);
-  }
-  
-  // Função para mostrar detalhes
-  async function mostrarDetalhes(ativoId) {
-    const modal = new bootstrap.Modal(document.getElementById('modalDetalhes'));
-    const conteudo = document.getElementById('conteudo-detalhes');
-    const btnEditar = document.getElementById('btn-editar-ativo');
-    
-    try {
-      conteudo.innerHTML = '<div class="text-center py-4"><div class="spinner-border" role="status"><span class="visually-hidden">Carregando...</span></div></div>';
-      btnEditar.href = `/ativos/${ativoId}`;
-      
-      const response = await fetch(`/api/ativos/${ativoId}`);
-      const ativo = await response.json();
-      
-      // Carrega atributos específicos
-      const atributosResponse = await fetch(`/api/ativos/${ativoId}/atributos`);
-      const atributos = await atributosResponse.json();
-      
-      let html = `
-        <div class="row">
-          <div class="col-md-6">
-            <h6>Informações Básicas</h6>
-            <p><strong>Código:</strong> ${ativo.codigo_ativo}</p>
-            <p><strong>Tipo:</strong> ${ativo.tipo_ativo}</p>
-            <p><strong>Categoria:</strong> ${ativo.categoria}</p>
-            <p><strong>Descrição:</strong> ${ativo.descricao || '-'}</p>
-            <p><strong>Status:</strong> <span class="${ativo.status === 'Em uso' ? 'status-em-uso' : ativo.status === 'Devolvido' ? 'status-devolvido' : 'status-desmobilizado'}">${ativo.status}</span></p>
-          </div>
-          <div class="col-md-6">
-            <h6>Relacionamentos</h6>
-            <p><strong>Proprietário:</strong> ${ativo.proprietario_nome || '-'}</p>
-            <p><strong>Usuário:</strong> ${ativo.usuario_nome || '-'}</p>
-            <p><strong>Local:</strong> ${ativo.local_nome || '-'}</p>
-            <p><strong>Projeto:</strong> ${ativo.projeto || '-'}</p>
-            <p><strong>Data Aquisição:</strong> ${ativo.data_aquisicao || '-'}</p>
-          </div>
-        </div>
-      `;
-      
-      // Atributos específicos
-      if (Object.keys(atributos).length > 0) {
-        html += '<div class="mt-3"><h6>Atributos Específicos</h6><ul class="list-unstyled">';
-        for (const [chave, valor] of Object.entries(atributos)) {
-          html += `<li><strong>${chave.replace(/_/g, ' ').toUpperCase()}:</strong> ${valor}</li>`;
-        }
-        html += '</ul></div>';
-      }
-      
-      conteudo.innerHTML = html;
-      modal.show();
-      
-    } catch (error) {
-      console.error('Erro ao carregar detalhes:', error);
-      conteudo.innerHTML = '<div class="text-center text-danger">Erro ao carregar detalhes.</div>';
     }
-  }
-  
-  // Função para editar ativo
-  function editarAtivo(ativoId) {
-    window.location.href = `/ativos/${ativoId}`;
-  }
-  
-  // Função para exportar CSV
-  async function exportarCSV() {
-    try {
-      const url = new URL('/api/ativos/exportar', window.location.origin);
-      
-      // Adiciona filtros atuais
-      const tipoAtivo = document.getElementById('filtro-tipo-ativo').value;
-      const status = document.getElementById('filtro-status').value;
-      
-      if (tipoAtivo) url.searchParams.append('tipo_ativo', tipoAtivo);
-      if (status) url.searchParams.append('status', status);
-      
-      window.location.href = url.toString();
-      
-    } catch (error) {
-      alert('Erro ao exportar CSV.');
-    }
-  }
-  
-  // Event listeners para filtros
-  document.getElementById('filtro-tipo-ativo').addEventListener('change', aplicarFiltros);
-  document.getElementById('filtro-status').addEventListener('change', aplicarFiltros);
-  document.getElementById('filtro-local').addEventListener('change', aplicarFiltros);
-  document.getElementById('pesquisa-rapida').addEventListener('input', aplicarFiltros);
-  
-  // Inicialização
-  document.addEventListener('DOMContentLoaded', function() {
-    carregarAtivos();
-    carregarLocais();
-  });
+}
 </script>
 {% endblock %}
