@@ -2,9 +2,10 @@
 import sqlite3
 import csv
 import io
+from pdf_generator import gerar_pdf_ativos
 from datetime import datetime
 from io import StringIO
-from flask import Blueprint, jsonify, request, Response
+from flask import Blueprint, jsonify, request, Response, send_file
 
 from models import (
     get_db_connection,
@@ -498,6 +499,54 @@ def exportar_ativos():
     except Exception as e:
         return jsonify({'sucesso': False, 'erro': f'Erro ao exportar: {str(e)}'}), 500
 
+@api_bp.route('/ativos/relatorio-pdf', methods=['GET'])
+def gerar_relatorio_pdf():
+    """Gera relatório PDF dos ativos com filtros aplicados"""
+    try:
+        filtros = {}
+        campos_filtro = ['tipo_ativo', 'categoria', 'status', 'codigo_ativo', 
+                        'descricao', 'ambiente_local', 'predio', 'setor_local', 
+                        'proprietario', 'usuario']
+        
+        for campo in campos_filtro:
+            valor = request.args.get(campo)
+            if valor:
+                if ',' in valor:
+                    filtros[campo] = [v.strip() for v in valor.split(',') if v.strip()]
+                else:
+                    filtros[campo] = valor
+        
+        resultados = buscar_ativos(filtros)
+        
+        if not resultados:
+            return jsonify({'sucesso': False, 'erro': 'Nenhum ativo encontrado para o relatório'}), 404
+        
+        filtros_legiveis = {}
+        if filtros.get('tipo_ativo'): filtros_legiveis['Tipo'] = filtros['tipo_ativo']
+        if filtros.get('status'): filtros_legiveis['Status'] = filtros['status']
+        if filtros.get('proprietario'): filtros_legiveis['Proprietário'] = filtros['proprietario']
+        if filtros.get('codigo_ativo'): filtros_legiveis['Código'] = filtros['codigo_ativo']
+        
+        # Gera os bytes do PDF
+        pdf_bytes = gerar_pdf_ativos(
+            [dict(row) for row in resultados],
+            filtros_aplicados=filtros_legiveis
+        )
+        
+        filename = f'relatorio_ativos_{datetime.now().strftime("%Y%m%d_%H%M%S")}.pdf'
+        
+        # ✅ CORREÇÃO DEFINITIVA: Usa send_file com BytesIO, que o Werkzeug aceita 100%
+        return send_file(
+            io.BytesIO(pdf_bytes),
+            mimetype='application/pdf',
+            as_attachment=True,
+            download_name=filename
+        )
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()  # Mostra o erro real no terminal se ainda falhar
+        return jsonify({'sucesso': False, 'erro': f'Erro ao gerar PDF: {str(e)}'}), 500
 
 @api_bp.route('/ativos/lote', methods=['POST'])
 def processar_lote_ativos():
@@ -607,3 +656,74 @@ def login_api():
         return jsonify({"erro": "Email ou senha inválidos"}), 401
     except Exception as e:
         return jsonify({"erro": f"Erro na autenticação: {str(e)}"}), 500
+
+        # ============================================================================
+# 10. DASHBOARD
+# ============================================================================
+
+@api_bp.route('/dashboard', methods=['GET'])
+def dashboard_data():
+    """Retorna dados agregados para o dashboard"""
+    try:
+        # Contagens básicas
+        total_ativos = contar_ativos()
+        ativos_por_status = contar_ativos_por_status()
+        ativos_por_tipo = contar_ativos_por_tipo()
+        ativos_por_categoria = contar_ativos_por_categoria()
+        ativos_por_proprietario = contar_ativos_por_proprietario()
+        ativos_por_local = contar_ativos_por_local()
+        
+        # Contagens auxiliares
+        total_usuarios_ativos = contar_usuarios_ativos()
+        total_usuarios_inativos = contar_usuarios_inativos()
+        total_empresas = contar_empresas()
+        total_locais = contar_locais_ativos()
+        total_setores = contar_setores_ativos()
+        
+        # Extrair valores por status
+        status_dict = {row['status']: row['total'] for row in ativos_por_status}
+        em_uso = status_dict.get('Em uso', 0)
+        devolvido = status_dict.get('Devolvido', 0)
+        em_estoque = status_dict.get('Em Estoque', 0)
+        com_defeito = status_dict.get('Com Defeito', 0)
+        desmobilizado = status_dict.get('Desmobilizado', 0)
+        
+        # Dados complementares
+        ativos_recentes = [dict(row) for row in buscar_ativos_recentes(5)]
+        ativos_com_defeito = [dict(row) for row in buscar_ativos_com_defeito()]
+        ativos_sem_usuario = [dict(row) for row in buscar_ativos_sem_usuario()]
+        
+        return jsonify({
+            'sucesso': True,
+            'dados': {
+                'kpis': {
+                    'total_ativos': total_ativos,
+                    'em_uso': em_uso,
+                    'devolvido': devolvido,
+                    'em_estoque': em_estoque,
+                    'com_defeito': com_defeito,
+                    'desmobilizado': desmobilizado,
+                    'total_usuarios_ativos': total_usuarios_ativos,
+                    'total_usuarios_inativos': total_usuarios_inativos,
+                    'total_empresas': total_empresas,
+                    'total_locais': total_locais,
+                    'total_setores': total_setores
+                },
+                'graficos': {
+                    'por_status': [dict(row) for row in ativos_por_status],
+                    'por_tipo': [dict(row) for row in ativos_por_tipo],
+                    'por_categoria': [dict(row) for row in ativos_por_categoria],
+                    'por_proprietario': [dict(row) for row in ativos_por_proprietario],
+                    'por_local': [dict(row) for row in ativos_por_local]
+                },
+                'alertas': {
+                    'ativos_com_defeito': ativos_com_defeito,
+                    'ativos_sem_usuario': ativos_sem_usuario
+                },
+                'recentes': ativos_recentes
+            }
+        })
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'sucesso': False, 'erro': f'Erro ao carregar dashboard: {str(e)}'}), 500

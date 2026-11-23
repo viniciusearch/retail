@@ -5,7 +5,7 @@
 {% block content %}
 <div class="container-fluid mt-4" x-data="gerenciarAtivos()">
     <!-- Header -->
-    <div class="row mb-4">
+    <div class="row mb-4 align-items-center">
         <div class="col-md-8">
             <h2 class="mb-0">
                 <i class="bi bi-laptop me-2"></i>Gerenciar Ativos
@@ -19,12 +19,12 @@
         </div>
     </div>
 
-    <!-- Filtros -->
-    <div class="card mb-4 shadow-sm">
+    <!-- Filtros Avançados -->
+    <div class="card mb-3 shadow-sm">
         <div class="card-body">
             <div class="row g-3">
                 <div class="col-md-3">
-                    <input type="text" class="form-control" placeholder="Buscar por código ou descrição..."
+                    <input type="text" class="form-control" placeholder="Buscar por código ou descrição..." 
                            x-model="filtroBusca" @input="filtrarAtivos()">
                 </div>
                 <div class="col-md-2">
@@ -48,7 +48,7 @@
                         <option value="Com Defeito">Com Defeito</option>
                     </select>
                 </div>
-                <div class="col-md-2">
+                <div class="col-md-3">
                     <select class="form-select" x-model="filtroProprietario" @change="filtrarAtivos()">
                         <option value="">Todos os Proprietários</option>
                         <template x-for="emp in empresas" :key="emp.id">
@@ -56,16 +56,19 @@
                         </template>
                     </select>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <button class="btn btn-outline-secondary w-100" @click="limparFiltros()">
-                        <i class="bi bi-x-circle me-2"></i>Limpar Filtros
+                        <i class="bi bi-x-circle me-2"></i>Limpar
                     </button>
+                      <button class="btn btn-danger w-100" @click="gerarPDF()" :disabled="ativosFiltrados.length === 0">
+        <i class="bi bi-file-pdf me-2"></i>Gerar PDF
+    </button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Tabela -->
+    <!-- Tabela de Ativos -->
     <div class="card shadow-sm">
         <div class="card-body p-0">
             <div class="table-responsive">
@@ -88,7 +91,7 @@
                             <tr>
                                 <td colspan="9" class="text-center py-5 text-muted">
                                     <i class="bi bi-inbox fs-1 d-block mb-2"></i>
-                                    Nenhum ativo encontrado
+                                    Nenhum ativo encontrado com os filtros atuais
                                 </td>
                             </tr>
                         </template>
@@ -133,9 +136,18 @@
                 </table>
             </div>
         </div>
+        <!-- ✅ CONTADOR DE REGISTROS NO RODAPÉ -->
+        <div class="card-footer bg-light text-muted small d-flex justify-content-between align-items-center">
+            <span>
+                Exibindo <strong x-text="ativosFiltrados.length"></strong> de <strong x-text="ativos.length"></strong> ativos
+            </span>
+            <span x-show="ativosFiltrados.length !== ativos.length" class="fst-italic">
+                (Filtros aplicados)
+            </span>
+        </div>
     </div>
 
-    <!-- Modal -->
+    <!-- Modal de Cadastro/Edição -->
     <div class="modal fade" id="modalAtivo" tabindex="-1" x-ref="modalAtivo">
         <div class="modal-dialog modal-xl modal-dialog-centered">
             <div class="modal-content">
@@ -148,7 +160,6 @@
                 </div>
                 <div class="modal-body">
                     <form @submit.prevent="salvarAtivo" novalidate>
-
                         <!-- Identificação -->
                         <h6 class="text-muted mb-3 border-bottom pb-2">Identificação Principal</h6>
                         <div class="row g-3 mb-4">
@@ -298,7 +309,7 @@ function gerenciarAtivos() {
         filtroBusca: '',
         filtroTipo: '',
         filtroStatus: '',
-        filtroProprietario: '',
+        filtroProprietario: '', // ✅ Filtro de proprietário
 
         editandoId: null,
         salvando: false,
@@ -306,29 +317,14 @@ function gerenciarAtivos() {
         erros: {},
 
         form: {
-            codigo_ativo: '',
-            patrimonio: '',
-            numero_serie: '',
-            tipo_ativo: '',
-            categoria: '',
-            descricao: '',
-            status: 'Devolvido',
-            proprietario_id: '',
-            usuario_atual_id: '',
-            local_atual_id: '',
-            projeto: '',
-            observacoes: ''
+            codigo_ativo: '', patrimonio: '', numero_serie: '', tipo_ativo: '',
+            categoria: '', descricao: '', status: 'Devolvido', proprietario_id: '',
+            usuario_atual_id: '', local_atual_id: '', projeto: '', observacoes: ''
         },
 
-        atributos: {
-            marca: '',
-            modelo: '',
-            imei: '',
-            host_name: ''
-        },
+        atributos: { marca: '', modelo: '', imei: '', host_name: '' },
 
         async init() {
-            // 1. Carrega todos os dados necessários
             await Promise.all([
                 this.carregarAtivos(),
                 this.carregarEmpresas(),
@@ -338,55 +334,17 @@ function gerenciarAtivos() {
             this.ativosFiltrados = this.ativos;
         },
 
-        // ✅ MÉTODO SIMPLIFICADO E ROBUSTO
-        inicializarChoicesNoModal() {
-            const modalEl = this.$refs.modalAtivo;
-            if (!modalEl) return;
-
-            // Destrói instâncias antigas para evitar duplicação ou estados travados
-            modalEl.querySelectorAll('select.modal-choices').forEach(el => {
-                window.destroyChoices(el);
-            });
-
-            // $nextTick garante que o Alpine.js terminou de renderizar as <option> do x-for
-            this.$nextTick(() => {
-                // Pequeno delay para garantir que o Bootstrap também finalizou a transição de abertura do modal
-                setTimeout(() => {
-                    modalEl.querySelectorAll('select.modal-choices').forEach(select => {
-                        // Inicializa o Choices.js
-                        window.initChoices(select);
-                        
-                        // Define o valor selecionado se existir no form
-                        if (select.choicesInstance) {
-                            const fieldName = select.dataset.field;
-                            const fieldValue = this.form[fieldName];
-                            if (fieldValue !== undefined && fieldValue !== '' && fieldValue !== null) {
-                                try {
-                                    select.choicesInstance.setChoiceByValue(String(fieldValue));
-                                } catch (e) {
-                                    console.warn('Falha ao definir valor no Choices:', fieldName, e);
-                                }
-                            }
-                        }
-                    });
-                }, 100); // 100ms é o sweet spot para Alpine + Bootstrap Modal
-            });
-        },
-
         async carregarAtivos() {
             try {
                 const response = await fetch('/api/ativos');
                 this.ativos = await response.json();
-            } catch (error) {
-                console.error('Erro ao carregar ativos:', error);
-            }
+            } catch (error) { console.error('Erro ao carregar ativos:', error); }
         },
 
         async carregarEmpresas() {
             try {
                 const response = await fetch('/api/empresas?dropdown=true');
                 this.empresas = await response.json();
-                console.log('✅ Empresas carregadas:', this.empresas.length);
             } catch (error) { console.error('Erro empresas:', error); }
         },
 
@@ -394,7 +352,6 @@ function gerenciarAtivos() {
             try {
                 const response = await fetch('/api/usuarios?dropdown=true');
                 this.usuarios = await response.json();
-                console.log('✅ Usuários carregados:', this.usuarios.length, this.usuarios);
             } catch (error) { console.error('Erro usuários:', error); }
         },
 
@@ -402,18 +359,22 @@ function gerenciarAtivos() {
             try {
                 const response = await fetch('/api/locais?dropdown=true');
                 this.locais = await response.json();
-                console.log('✅ Locais carregados:', this.locais.length);
             } catch (error) { console.error('Erro locais:', error); }
         },
 
+        // ✅ Lógica de filtragem atualizada incluindo o proprietário
         filtrarAtivos() {
             this.ativosFiltrados = this.ativos.filter(a => {
                 const matchBusca = !this.filtroBusca ||
                     a.codigo_ativo.toLowerCase().includes(this.filtroBusca.toLowerCase()) ||
                     (a.descricao && a.descricao.toLowerCase().includes(this.filtroBusca.toLowerCase()));
+                
                 const matchTipo = !this.filtroTipo || a.tipo_ativo === this.filtroTipo;
                 const matchStatus = !this.filtroStatus || a.status === this.filtroStatus;
+                
+                // Compara o nome da empresa (proprietario_nome) com o filtro selecionado
                 const matchProprietario = !this.filtroProprietario || a.proprietario_nome === this.filtroProprietario;
+                
                 return matchBusca && matchTipo && matchStatus && matchProprietario;
             });
         },
@@ -422,18 +383,34 @@ function gerenciarAtivos() {
             this.filtroBusca = '';
             this.filtroTipo = '';
             this.filtroStatus = '';
-            this.filtroProprietario = '';
+            this.filtroProprietario = ''; // ✅ Reseta o filtro de proprietário
             this.filtrarAtivos();
         },
+        gerarPDF() {
+    // Monta a URL com os filtros atuais
+    const params = new URLSearchParams();
+    
+    if (this.filtroBusca) params.append('codigo_ativo', this.filtroBusca);
+    if (this.filtroTipo) params.append('tipo_ativo', this.filtroTipo);
+    if (this.filtroStatus) params.append('status', this.filtroStatus);
+    if (this.filtroProprietario) params.append('proprietario', this.filtroProprietario);
+    
+    const queryString = params.toString();
+    const url = `/api/ativos/relatorio-pdf${queryString ? '?' + queryString : ''}`;
+    
+    // Abre em nova aba para download
+    window.open(url, '_blank');
+    
+    Toast.fire({ 
+        icon: 'info', 
+        title: `Gerando PDF com ${this.ativosFiltrados.length} ativo(s)...` 
+    });
+},
 
         abrirModal() {
             this.editandoId = null;
             this.erros = {};
-            this.form = {
-                codigo_ativo: '', patrimonio: '', numero_serie: '', tipo_ativo: '',
-                categoria: '', descricao: '', status: 'Devolvido', proprietario_id: '',
-                usuario_atual_id: '', local_atual_id: '', projeto: '', observacoes: ''
-            };
+            this.form = { codigo_ativo: '', patrimonio: '', numero_serie: '', tipo_ativo: '', categoria: '', descricao: '', status: 'Devolvido', proprietario_id: '', usuario_atual_id: '', local_atual_id: '', projeto: '', observacoes: '' };
             this.atributos = { marca: '', modelo: '', imei: '', host_name: '' };
             this.showModal();
         },
@@ -459,32 +436,36 @@ function gerenciarAtivos() {
             try {
                 const response = await fetch(`/api/ativos/${ativo.id}/atributos`);
                 const data = await response.json();
-                this.atributos = {
-                    marca: data.marca || '', modelo: data.modelo || '',
-                    imei: data.imei || '', host_name: data.host_name || ''
-                };
+                this.atributos = { marca: data.marca || '', modelo: data.modelo || '', imei: data.imei || '', host_name: data.host_name || '' };
             } catch (error) {
                 this.atributos = { marca: '', modelo: '', imei: '', host_name: '' };
             }
-
             this.showModal();
         },
 
         showModal() {
             const modalEl = this.$refs.modalAtivo;
-
-            // Abre o modal do Bootstrap
+            modalEl.querySelectorAll('select.modal-choices').forEach(el => window.destroyChoices(el));
             this.modalInstance = new bootstrap.Modal(modalEl);
             this.modalInstance.show();
-
-            // Aciona a inicialização segura dos selects
-            this.inicializarChoicesNoModal();
+            this.$nextTick(() => {
+                setTimeout(() => {
+                    modalEl.querySelectorAll('select.modal-choices').forEach(el => {
+                        window.initChoices(el);
+                        if (el.choicesInstance) {
+                            const fieldName = el.dataset.field;
+                            const fieldValue = this.form[fieldName];
+                            if (fieldValue !== undefined && fieldValue !== '' && fieldValue !== null) {
+                                try { el.choicesInstance.setChoiceByValue(String(fieldValue)); } catch (e) {}
+                            }
+                        }
+                    });
+                }, 100);
+            });
         },
 
         fecharModal() {
-            if (this.modalInstance) {
-                this.modalInstance.hide();
-            }
+            if (this.modalInstance) this.modalInstance.hide();
             this.editandoId = null;
             this.erros = {};
         },
@@ -492,23 +473,13 @@ function gerenciarAtivos() {
         validarFormulario() {
             this.erros = {};
             let valido = true;
-
-            if (!this.form.codigo_ativo || this.form.codigo_ativo.trim() === '') {
-                this.erros.codigo_ativo = 'Código do ativo é obrigatório'; valido = false;
-            }
-            if (!this.form.tipo_ativo || this.form.tipo_ativo === '') {
-                this.erros.tipo_ativo = 'Tipo de ativo é obrigatório'; valido = false;
-            }
-            if (!this.form.categoria || this.form.categoria.trim() === '') {
-                this.erros.categoria = 'Categoria é obrigatória'; valido = false;
-            }
-            if (!this.form.proprietario_id || this.form.proprietario_id === '') {
-                this.erros.proprietario_id = 'Proprietário é obrigatório'; valido = false;
-            }
+            if (!this.form.codigo_ativo || this.form.codigo_ativo.trim() === '') { this.erros.codigo_ativo = 'Código é obrigatório'; valido = false; }
+            if (!this.form.tipo_ativo || this.form.tipo_ativo === '') { this.erros.tipo_ativo = 'Tipo é obrigatório'; valido = false; }
+            if (!this.form.categoria || this.form.categoria.trim() === '') { this.erros.categoria = 'Categoria é obrigatória'; valido = false; }
+            if (!this.form.proprietario_id || this.form.proprietario_id === '') { this.erros.proprietario_id = 'Proprietário é obrigatório'; valido = false; }
             if (this.form.status === 'Em uso' && (!this.form.usuario_atual_id || this.form.usuario_atual_id === '')) {
                 this.erros.usuario_atual_id = 'Ativos "Em uso" devem ter um usuário vinculado'; valido = false;
             }
-
             return valido;
         },
 
@@ -517,11 +488,8 @@ function gerenciarAtivos() {
                 Swal.fire({ icon: 'warning', title: 'Verifique os campos', text: 'Existem campos obrigatórios não preenchidos', confirmButtonText: 'Entendi' });
                 return;
             }
-
             this.salvando = true;
-
             try {
-                // Sanitização robusta contra objetos do Choices.js
                 const sanitizar = (val) => {
                     if (val === null || val === undefined) return null;
                     if (typeof val === 'object') {
@@ -551,25 +519,14 @@ function gerenciarAtivos() {
                 };
 
                 for (const [key, value] of Object.entries(this.atributos)) {
-                    if (value && String(value).trim() !== '') {
-                        payload.atributos[key] = String(value);
-                    }
+                    if (value && String(value).trim() !== '') payload.atributos[key] = String(value);
                 }
-                if (Object.keys(payload.atributos).length === 0) {
-                    delete payload.atributos;
-                }
-
-                console.log('📦 Payload enviado:', JSON.stringify(payload, null, 2));
+                if (Object.keys(payload.atributos).length === 0) delete payload.atributos;
 
                 const url = this.editandoId ? `/api/ativos/${this.editandoId}` : '/api/ativos';
                 const method = this.editandoId ? 'PATCH' : 'POST';
 
-                const response = await fetch(url, {
-                    method: method,
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
+                const response = await fetch(url, { method: method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
                 const data = await response.json();
 
                 if (response.ok) {
@@ -603,7 +560,6 @@ function gerenciarAtivos() {
                     try {
                         const response = await fetch(`/api/ativos/${ativo.id}`, { method: 'DELETE' });
                         const data = await response.json();
-
                         if (response.ok) {
                             Toast.fire({ icon: 'success', title: data.mensagem });
                             await this.carregarAtivos();

@@ -5,7 +5,7 @@
 {% block content %}
 <div class="container-fluid mt-4" x-data="gerenciarUsuarios()">
     <!-- Header -->
-    <div class="row mb-4">
+    <div class="row mb-4 align-items-center">
         <div class="col-md-8">
             <h2 class="mb-0">
                 <i class="bi bi-people-fill me-2"></i>Gerenciar Usuários
@@ -13,6 +13,9 @@
             <p class="text-muted mb-0">Cadastre e gerencie os colaboradores do sistema</p>
         </div>
         <div class="col-md-4 text-end">
+            <button class="btn btn-outline-success me-2" @click="abrirModalLote()">
+                <i class="bi bi-file-earmark-spreadsheet me-2"></i>Atualizar Matrículas (Lote)
+            </button>
             <button class="btn btn-primary" @click="abrirModal()">
                 <i class="bi bi-plus-circle me-2"></i>Novo Usuário
             </button>
@@ -24,11 +27,11 @@
         <div class="card-body">
             <div class="row g-3">
                 <div class="col-md-6">
-                    <input type="text" class="form-control" placeholder="Buscar por nome ou email..." 
+                    <input type="text" class="form-control" placeholder="Buscar por nome, email ou matrícula..." 
                            x-model="filtroBusca" @input="filtrarUsuarios()">
                 </div>
                 <div class="col-md-3">
-                    <select class="form-select choices-select" x-model="filtroStatus" @change="filtrarUsuarios()">
+                    <select class="form-select" x-model="filtroStatus" @change="filtrarUsuarios()">
                         <option value="">Todos os Status</option>
                         <option value="Ativo">Ativo</option>
                         <option value="Inativo">Inativo</option>
@@ -36,7 +39,7 @@
                     </select>
                 </div>
                 <div class="col-md-3">
-                    <select class="form-select choices-select" x-model="filtroSetor" @change="filtrarUsuarios()">
+                    <select class="form-select" x-model="filtroSetor" @change="filtrarUsuarios()">
                         <option value="">Todos os Setores</option>
                         <template x-for="setor in setores" :key="setor.id">
                             <option :value="setor.id" x-text="setor.nome"></option>
@@ -51,11 +54,12 @@
     <div class="card shadow-sm">
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0" id="tabelaUsuarios">
+                <table class="table table-hover align-middle mb-0">
                     <thead class="table-light">
                         <tr>
                             <th class="ps-4">Nome</th>
                             <th>Email</th>
+                            <th>Matrícula</th>
                             <th>Cargo</th>
                             <th>Setor</th>
                             <th>Local Padrão</th>
@@ -67,7 +71,7 @@
                     <tbody>
                         <template x-if="usuariosFiltrados.length === 0">
                             <tr>
-                                <td colspan="8" class="text-center py-5 text-muted">
+                                <td colspan="9" class="text-center py-5 text-muted">
                                     <i class="bi bi-inbox fs-1 d-block mb-2"></i>
                                     Nenhum usuário encontrado
                                 </td>
@@ -77,15 +81,16 @@
                             <tr>
                                 <td class="ps-4">
                                     <div class="fw-bold" x-text="usuario.nome_completo"></div>
-                                    <small class="text-muted" x-show="usuario.matricula" x-text="'Mat: ' + usuario.matricula"></small>
                                 </td>
                                 <td>
                                     <a :href="'mailto:' + usuario.email" class="text-decoration-none" x-text="usuario.email"></a>
                                 </td>
-                                <td x-text="usuario.cargo_nome || '-'"></td>
                                 <td>
-                                    <span class="badge bg-info bg-opacity-10 text-info" x-text="usuario.setor_nome || '-'"></span>
+                                    <span class="badge bg-light text-dark border" x-show="usuario.matricula" x-text="usuario.matricula"></span>
+                                    <span class="text-muted" x-show="!usuario.matricula">-</span>
                                 </td>
+                                <td x-text="usuario.cargo_nome || '-'"></td>
+                                <td><span class="badge bg-info bg-opacity-10 text-info" x-text="usuario.setor_nome || '-'"></span></td>
                                 <td x-text="usuario.local_nome || '-'"></td>
                                 <td>
                                     <span class="badge" 
@@ -120,10 +125,18 @@
                 </table>
             </div>
         </div>
+        <div class="card-footer bg-light text-muted small d-flex justify-content-between align-items-center">
+            <span>
+                Exibindo <strong x-text="usuariosFiltrados.length"></strong> de <strong x-text="usuarios.length"></strong> usuários
+            </span>
+            <span x-show="usuariosFiltrados.length !== usuarios.length" class="fst-italic">
+                (Filtros aplicados)
+            </span>
+        </div>
     </div>
 
-    <!-- Modal de Cadastro/Edição -->
-    <div class="modal fade" id="modalUsuario" tabindex="-1" x-ref="modalUsuario" @keydown.escape.window="fecharModal()">
+    <!-- ==================== MODAL: Cadastro/Edição ==================== -->
+    <div class="modal fade" id="modalUsuario" tabindex="-1" x-ref="modalUsuario">
         <div class="modal-dialog modal-lg modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header bg-primary text-white">
@@ -134,30 +147,31 @@
                     <button type="button" class="btn-close btn-close-white" @click="fecharModal()"></button>
                 </div>
                 <div class="modal-body">
-                    <form @submit.prevent="salvarUsuario">
+                    <form @submit.prevent="salvarUsuario" novalidate>
                         <div class="row g-3">
-                            <!-- Nome Completo -->
                             <div class="col-md-12">
                                 <label class="form-label">Nome Completo *</label>
-                                <input type="text" class="form-control" x-model="form.nome_completo" required placeholder="Ex: JOÃO DA SILVA">
+                                <input type="text" class="form-control" :class="{'is-invalid': erros.nome_completo}" 
+                                       x-model="form.nome_completo" placeholder="Ex: JOÃO DA SILVA">
+                                <div class="invalid-feedback" x-show="erros.nome_completo" x-text="erros.nome_completo"></div>
                             </div>
 
-                            <!-- Email -->
                             <div class="col-md-6">
                                 <label class="form-label">Email *</label>
-                                <input type="email" class="form-control" x-model="form.email" required placeholder="ex: joao.silva@ctcinfra.com.br">
+                                <input type="email" class="form-control" :class="{'is-invalid': erros.email}" 
+                                       x-model="form.email" placeholder="ex: joao.silva@ctcinfra.com.br">
+                                <div class="invalid-feedback" x-show="erros.email" x-text="erros.email"></div>
                             </div>
 
-                            <!-- Matrícula -->
                             <div class="col-md-6">
                                 <label class="form-label">Matrícula</label>
-                                <input type="text" class="form-control" x-model="form.matricula" placeholder="Opcional">
+                                <input type="text" class="form-control" x-model="form.matricula" placeholder="Ex: 10025">
                             </div>
 
-                            <!-- Cargo -->
+                            <!-- ✅ Selects com IDs únicos para manipulação via JS vanilla -->
                             <div class="col-md-6">
                                 <label class="form-label">Cargo</label>
-                                <select class="form-select choices-select" x-model="form.cargo_id">
+                                <select class="form-select" id="select-cargo" x-model="form.cargo_id">
                                     <option value="">Selecione...</option>
                                     <template x-for="cargo in cargos" :key="cargo.id">
                                         <option :value="cargo.id" x-text="cargo.nome"></option>
@@ -165,10 +179,9 @@
                                 </select>
                             </div>
 
-                            <!-- Setor -->
                             <div class="col-md-6">
                                 <label class="form-label">Setor</label>
-                                <select class="form-select choices-select" x-model="form.setor_id">
+                                <select class="form-select" id="select-setor" x-model="form.setor_id">
                                     <option value="">Selecione...</option>
                                     <template x-for="setor in setores" :key="setor.id">
                                         <option :value="setor.id" x-text="setor.nome"></option>
@@ -176,10 +189,9 @@
                                 </select>
                             </div>
 
-                            <!-- Local Padrão -->
                             <div class="col-md-6">
                                 <label class="form-label">Local Padrão</label>
-                                <select class="form-select choices-select" x-model="form.local_padrao_id">
+                                <select class="form-select" id="select-local" x-model="form.local_padrao_id">
                                     <option value="">Selecione...</option>
                                     <template x-for="local in locais" :key="local.id">
                                         <option :value="local.id" x-text="local.nome"></option>
@@ -187,31 +199,30 @@
                                 </select>
                             </div>
 
-                            <!-- Perfil -->
                             <div class="col-md-6">
                                 <label class="form-label">Perfil de Acesso *</label>
-                                <select class="form-select choices-select" x-model="form.perfil_id" required>
+                                <select class="form-select" :class="{'is-invalid': erros.perfil_id}" id="select-perfil" x-model="form.perfil_id">
                                     <option value="">Selecione...</option>
                                     <template x-for="perfil in perfis" :key="perfil.id">
                                         <option :value="perfil.id" x-text="perfil.nome"></option>
                                     </template>
                                 </select>
+                                <div class="invalid-feedback d-block" x-show="erros.perfil_id" x-text="erros.perfil_id"></div>
                             </div>
 
-                            <!-- Status -->
                             <div class="col-md-6">
                                 <label class="form-label">Status</label>
-                                <select class="form-select choices-select" x-model="form.status">
+                                <select class="form-select" x-model="form.status">
                                     <option value="Ativo">Ativo</option>
                                     <option value="Inativo">Inativo</option>
                                     <option value="Bloqueado">Bloqueado</option>
                                 </select>
                             </div>
 
-                            <!-- Senha (apenas no cadastro) -->
                             <div class="col-md-6" x-show="!editandoId">
-                                <label class="form-label">Senha</label>
-                                <input type="password" class="form-control" x-model="form.senha" placeholder="Deixe vazio para usar: mudar123">
+                                <label class="form-label">Senha Inicial</label>
+                                <input type="password" class="form-control" x-model="form.senha" 
+                                       placeholder="Deixe vazio para usar: mudar123">
                             </div>
                         </div>
 
@@ -227,25 +238,135 @@
             </div>
         </div>
     </div>
+
+    <!-- ==================== MODAL: Atualização em Lote ==================== -->
+    <div class="modal fade" id="modalLoteMatriculas" tabindex="-1" x-ref="modalLote">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-file-earmark-spreadsheet me-2"></i>Atualizar Matrículas em Lote
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @click="fecharModalLote()"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info small">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <strong>Instruções:</strong> O arquivo CSV deve conter as colunas <code>email</code> e <code>matricula</code>, 
+                        separadas por ponto e vírgula (<code>;</code>). O sistema usará o <strong>email</strong> como chave para 
+                        localizar cada usuário e atualizar a matrícula.
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Arquivo CSV *</label>
+                        <input type="file" class="form-control" 
+                               x-ref="fileInput" 
+                               accept=".csv" 
+                               @change="onFileChange()">
+                        <small class="text-muted" x-show="arquivoSelecionado">
+                            <i class="bi bi-check-circle text-success me-1"></i>
+                            <span x-text="arquivoSelecionado"></span>
+                        </small>
+                    </div>
+
+                    <div class="alert alert-secondary small mb-0">
+                        <strong>Formato esperado do CSV:</strong>
+                        <pre class="mb-0 mt-2 p-2 bg-white border rounded small"><code>email;matricula
+joao.silva@ctcinfra.com.br;10025
+maria.souza@ctcinfra.com.br;10089</code></pre>
+                    </div>
+
+                    <div x-show="resultadoLote !== null" class="mt-3">
+                        <div class="card">
+                            <div class="card-body p-3">
+                                <h6 class="mb-3"><i class="bi bi-clipboard-check me-2"></i>Resultado do Processamento</h6>
+                                
+                                <div class="row g-2 text-center mb-3">
+                                    <div class="col-4">
+                                        <div class="border rounded p-2 bg-success-subtle">
+                                            <div class="fs-4 fw-bold text-success" x-text="resultadoLote.sucesso"></div>
+                                            <small class="text-muted">Atualizados</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="border rounded p-2 bg-warning-subtle">
+                                            <div class="fs-4 fw-bold text-warning" x-text="resultadoLote.nao_encontrados.length"></div>
+                                            <small class="text-muted">Não encontrados</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="border rounded p-2 bg-danger-subtle">
+                                            <div class="fs-4 fw-bold text-danger" x-text="resultadoLote.erros.length"></div>
+                                            <small class="text-muted">Erros</small>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div x-show="resultadoLote.nao_encontrados.length > 0">
+                                    <details class="mb-2">
+                                        <summary class="text-warning small fw-bold cursor-pointer">
+                                            Ver e-mails não cadastrados (<span x-text="resultadoLote.nao_encontrados.length"></span>)
+                                        </summary>
+                                        <ul class="small text-muted mt-2 mb-0">
+                                            <template x-for="item in resultadoLote.nao_encontrados" :key="item">
+                                                <li x-text="item"></li>
+                                            </template>
+                                        </ul>
+                                    </details>
+                                </div>
+
+                                <div x-show="resultadoLote.erros.length > 0">
+                                    <details>
+                                        <summary class="text-danger small fw-bold cursor-pointer">
+                                            Ver erros de processamento (<span x-text="resultadoLote.erros.length"></span>)
+                                        </summary>
+                                        <ul class="small text-muted mt-2 mb-0">
+                                            <template x-for="item in resultadoLote.erros" :key="item">
+                                                <li x-text="item"></li>
+                                            </template>
+                                        </ul>
+                                    </details>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @click="fecharModalLote()">Fechar</button>
+                    <button type="button" class="btn btn-success" @click="processarLoteMatriculas()" 
+                            :disabled="processandoLote || !arquivoSelecionado">
+                        <span x-show="processandoLote" class="spinner-border spinner-border-sm me-2"></span>
+                        <i class="bi bi-upload me-1" x-show="!processandoLote"></i>
+                        <span x-text="processandoLote ? 'Processando...' : 'Processar Arquivo'"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
 function gerenciarUsuarios() {
     return {
+        // Dados
         usuarios: [],
         usuariosFiltrados: [],
         cargos: [],
         setores: [],
         locais: [],
         perfis: [],
-        
+
+        // Filtros
         filtroBusca: '',
         filtroStatus: '',
         filtroSetor: '',
-        
+
+        // Modal principal
         editandoId: null,
         salvando: false,
-        
+        modalInstance: null,
+        erros: {},
+
         form: {
             nome_completo: '',
             email: '',
@@ -258,6 +379,15 @@ function gerenciarUsuarios() {
             senha: ''
         },
 
+        // Estado do modal de lote
+        modalLoteInstance: null,
+        processandoLote: false,
+        arquivoSelecionado: '',
+        resultadoLote: null,
+
+        // ✅ Observers para detectar quando as opções são renderizadas
+        observers: [],
+
         async init() {
             await Promise.all([
                 this.carregarUsuarios(),
@@ -267,20 +397,18 @@ function gerenciarUsuarios() {
                 this.carregarPerfis()
             ]);
             this.usuariosFiltrados = this.usuarios;
-            
-            // Inicializa DataTables se houver a biblioteca carregada
-            this.$nextTick(() => {
-                if (typeof $.fn.DataTable !== 'undefined') {
-                    $('#tabelaUsuarios').DataTable({
-                        paging: false,
-                        searching: false, // Usamos nossa própria busca com Alpine
-                        info: false,
-                        language: {
-                            emptyTable: "Nenhum usuário encontrado"
-                        }
-                    });
-                }
-            });
+        },
+
+        getString(val) {
+            if (val === null || val === undefined) return '';
+            if (typeof val === 'string') return val;
+            if (typeof val === 'object') {
+                if ('value' in val) return String(val.value);
+                if ('id' in val) return String(val.id);
+                if (Array.isArray(val) && val.length === 1) return this.getString(val[0]);
+                if (Array.isArray(val) && val.length === 0) return '';
+            }
+            return String(val);
         },
 
         async carregarUsuarios() {
@@ -295,107 +423,187 @@ function gerenciarUsuarios() {
 
         async carregarCargos() {
             try {
-                const response = await fetch('/api/cargos?dropdown=true');
-                this.cargos = await response.json();
-            } catch (error) { console.error('Erro cargos:', error); }
+                const r = await fetch('/api/cargos?dropdown=true');
+                this.cargos = await r.json();
+            } catch (e) { console.error('Erro cargos:', e); }
         },
 
         async carregarSetores() {
             try {
-                const response = await fetch('/api/setores?dropdown=true');
-                this.setores = await response.json();
-            } catch (error) { console.error('Erro setores:', error); }
+                const r = await fetch('/api/setores?dropdown=true');
+                this.setores = await r.json();
+            } catch (e) { console.error('Erro setores:', e); }
         },
 
         async carregarLocais() {
             try {
-                const response = await fetch('/api/locais?dropdown=true');
-                this.locais = await response.json();
-            } catch (error) { console.error('Erro locais:', error); }
+                const r = await fetch('/api/locais?dropdown=true');
+                this.locais = await r.json();
+            } catch (e) { console.error('Erro locais:', e); }
         },
 
         async carregarPerfis() {
             try {
-                const response = await fetch('/api/perfis?dropdown=true');
-                this.perfis = await response.json();
-            } catch (error) { console.error('Erro perfis:', error); }
+                const r = await fetch('/api/perfis?dropdown=true');
+                this.perfis = await r.json();
+            } catch (e) { console.error('Erro perfis:', e); }
         },
 
         filtrarUsuarios() {
+            const busca = this.filtroBusca.toLowerCase();
             this.usuariosFiltrados = this.usuarios.filter(u => {
-                const matchBusca = !this.filtroBusca || 
-                    u.nome_completo.toLowerCase().includes(this.filtroBusca.toLowerCase()) ||
-                    (u.email && u.email.toLowerCase().includes(this.filtroBusca.toLowerCase()));
-                
+                const matchBusca = !busca ||
+                    u.nome_completo.toLowerCase().includes(busca) ||
+                    (u.email && u.email.toLowerCase().includes(busca)) ||
+                    (u.matricula && String(u.matricula).includes(busca));
                 const matchStatus = !this.filtroStatus || u.status === this.filtroStatus;
                 const matchSetor = !this.filtroSetor || u.setor_id == this.filtroSetor;
-                
                 return matchBusca && matchStatus && matchSetor;
             });
         },
 
         abrirModal() {
             this.editandoId = null;
+            this.erros = {};
             this.form = {
-                nome_completo: '',
-                email: '',
-                matricula: '',
-                cargo_id: '',
-                setor_id: '',
-                local_padrao_id: '',
-                perfil_id: '',
-                status: 'Ativo',
-                senha: ''
+                nome_completo: '', email: '', matricula: '',
+                cargo_id: '', setor_id: '', local_padrao_id: '',
+                perfil_id: '', status: 'Ativo', senha: ''
             };
-            
-            const modalEl = this.$refs.modalUsuario;
-            const modal = new bootstrap.Modal(modalEl);
-            modal.show();
+            this.showModal();
         },
 
         editarUsuario(usuario) {
+            console.log('✏️ Editando usuário:', usuario);
+            
             this.editandoId = usuario.id;
+            this.erros = {};
             this.form = {
-                nome_completo: usuario.nome_completo,
-                email: usuario.email,
+                nome_completo: usuario.nome_completo || '',
+                email: usuario.email || '',
                 matricula: usuario.matricula || '',
-                cargo_id: usuario.cargo_id || '',
-                setor_id: usuario.setor_id || '',
-                local_padrao_id: usuario.local_padrao_id || '',
-                perfil_id: usuario.perfil_id,
-                status: usuario.status,
+                cargo_id: usuario.cargo_id ? String(usuario.cargo_id) : '',
+                setor_id: usuario.setor_id ? String(usuario.setor_id) : '',
+                local_padrao_id: usuario.local_padrao_id ? String(usuario.local_padrao_id) : '',
+                perfil_id: usuario.perfil_id ? String(usuario.perfil_id) : '',
+                status: usuario.status || 'Ativo',
                 senha: ''
             };
             
+            console.log('📝 Form preenchido:', this.form);
+            
+            // ✅ Abre o modal
+            this.showModal();
+        },
+
+        showModal() {
             const modalEl = this.$refs.modalUsuario;
-            const modal = new bootstrap.Modal(modalEl);
-            modal.show();
+            this.modalInstance = new bootstrap.Modal(modalEl);
+            this.modalInstance.show();
+
+            // ✅ Aguarda o modal abrir completamente
+            modalEl.addEventListener('shown.bs.modal', () => {
+                console.log('✅ Modal aberto, aplicando valores aos selects...');
+                
+                // ✅ Aplica os valores aos selects via JS vanilla
+                this.aplicarValoresAosSelects();
+            }, { once: true });
+        },
+
+        // ✅ MÉTODO CRÍTICO: Aplica valores aos selects via JavaScript vanilla
+        aplicarValoresAosSelects() {
+            const selects = [
+                { id: 'select-cargo', value: this.form.cargo_id },
+                { id: 'select-setor', value: this.form.setor_id },
+                { id: 'select-local', value: this.form.local_padrao_id },
+                { id: 'select-perfil', value: this.form.perfil_id }
+            ];
+
+            selects.forEach(({ id, value }) => {
+                const select = document.getElementById(id);
+                if (!select) {
+                    console.warn(`⚠️ Select ${id} não encontrado`);
+                    return;
+                }
+
+                console.log(`🔧 Aplicando valor ${value} ao select ${id}`);
+                console.log(`   Opções disponíveis:`, Array.from(select.options).map(o => ({ value: o.value, text: o.text })));
+
+                // ✅ Define o valor diretamente no select
+                if (value && value !== '') {
+                    // Aguarda o próximo tick para garantir que as opções foram renderizadas
+                    setTimeout(() => {
+                        select.value = value;
+                        console.log(`   ✅ Valor aplicado: ${select.value}`);
+                        
+                        // Dispara evento change para notificar o Alpine.js
+                        select.dispatchEvent(new Event('change', { bubbles: true }));
+                    }, 50);
+                }
+            });
         },
 
         fecharModal() {
-            const modalEl = this.$refs.modalUsuario;
-            const modal = bootstrap.Modal.getInstance(modalEl);
-            if (modal) {
-                modal.hide();
-            }
+            if (this.modalInstance) this.modalInstance.hide();
             this.editandoId = null;
+            this.erros = {};
+        },
+
+        validarFormulario() {
+            this.erros = {};
+            let valido = true;
+
+            if (!this.form.nome_completo || this.form.nome_completo.trim() === '') {
+                this.erros.nome_completo = 'Nome completo é obrigatório';
+                valido = false;
+            }
+            if (!this.form.email || this.form.email.trim() === '') {
+                this.erros.email = 'Email é obrigatório';
+                valido = false;
+            } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.form.email)) {
+                this.erros.email = 'Formato de email inválido';
+                valido = false;
+            }
+            if (!this.form.perfil_id || this.form.perfil_id === '') {
+                this.erros.perfil_id = 'Perfil de acesso é obrigatório';
+                valido = false;
+            }
+
+            return valido;
         },
 
         async salvarUsuario() {
-            this.salvando = true;
-            
-            try {
-                const payload = { ...this.form };
-                
-                // Limpeza de dados: converte strings vazias em null para campos de ID
-                ['cargo_id', 'setor_id', 'local_padrao_id'].forEach(key => {
-                    if (payload[key] === '') payload[key] = null;
+            if (!this.validarFormulario()) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Verifique os campos',
+                    text: 'Existem campos obrigatórios não preenchidos',
+                    confirmButtonText: 'Entendi'
                 });
-                
-                // Remove a senha se estiver vazia na edição
-                if (this.editandoId && !payload.senha) {
-                    delete payload.senha;
+                return;
+            }
+
+            this.salvando = true;
+
+            try {
+                const payload = {
+                    nome_completo: this.getString(this.form.nome_completo).trim(),
+                    email: this.getString(this.form.email).trim().toLowerCase(),
+                    matricula: this.getString(this.form.matricula) || null,
+                    cargo_id: this.getString(this.form.cargo_id) || null,
+                    setor_id: this.getString(this.form.setor_id) || null,
+                    local_padrao_id: this.getString(this.form.local_padrao_id) || null,
+                    perfil_id: this.getString(this.form.perfil_id),
+                    status: this.getString(this.form.status)
+                };
+
+                if (!this.editandoId) {
+                    payload.senha = this.form.senha || 'mudar123';
+                } else if (this.form.senha) {
+                    payload.senha = this.form.senha;
                 }
+
+                console.log('📦 Payload:', payload);
 
                 const url = this.editandoId ? `/api/usuarios/${this.editandoId}` : '/api/usuarios';
                 const method = this.editandoId ? 'PUT' : 'POST';
@@ -409,14 +617,7 @@ function gerenciarUsuarios() {
                 const data = await response.json();
 
                 if (response.ok) {
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Sucesso!',
-                        text: data.mensagem,
-                        timer: 2000,
-                        showConfirmButton: false
-                    });
-                    
+                    Toast.fire({ icon: 'success', title: data.mensagem });
                     this.fecharModal();
                     await this.carregarUsuarios();
                     this.filtrarUsuarios();
@@ -424,6 +625,7 @@ function gerenciarUsuarios() {
                     Swal.fire('Erro', data.erro || 'Falha ao salvar usuário', 'error');
                 }
             } catch (error) {
+                console.error('Erro:', error);
                 Swal.fire('Erro', 'Falha na comunicação com o servidor', 'error');
             } finally {
                 this.salvando = false;
@@ -433,7 +635,8 @@ function gerenciarUsuarios() {
         confirmarExclusao(usuario) {
             Swal.fire({
                 title: 'Confirmar Exclusão',
-                text: `Deseja realmente excluir o usuário "${usuario.nome_completo}"? Esta ação não pode ser desfeita.`,
+                html: `Deseja realmente excluir o usuário <strong>"${usuario.nome_completo}"</strong>?<br>
+                       <small class="text-muted">A exclusão falhará se houver ativos vinculados.</small>`,
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonColor: '#d33',
@@ -443,14 +646,11 @@ function gerenciarUsuarios() {
             }).then(async (result) => {
                 if (result.isConfirmed) {
                     try {
-                        const response = await fetch(`/api/usuarios/${usuario.id}`, {
-                            method: 'DELETE'
-                        });
-
+                        const response = await fetch(`/api/usuarios/${usuario.id}`, { method: 'DELETE' });
                         const data = await response.json();
 
                         if (response.ok) {
-                            Swal.fire('Excluído!', data.mensagem, 'success');
+                            Toast.fire({ icon: 'success', title: data.mensagem });
                             await this.carregarUsuarios();
                             this.filtrarUsuarios();
                         } else {
@@ -461,6 +661,88 @@ function gerenciarUsuarios() {
                     }
                 }
             });
+        },
+
+        abrirModalLote() {
+            this.arquivoSelecionado = '';
+            this.resultadoLote = null;
+            this.processandoLote = false;
+            if (this.$refs.fileInput) this.$refs.fileInput.value = '';
+            this.modalLoteInstance = new bootstrap.Modal(this.$refs.modalLote);
+            this.modalLoteInstance.show();
+        },
+
+        fecharModalLote() {
+            if (this.modalLoteInstance) this.modalLoteInstance.hide();
+            this.arquivoSelecionado = '';
+            this.resultadoLote = null;
+        },
+
+        onFileChange() {
+            const file = this.$refs.fileInput.files[0];
+            if (file) {
+                if (!file.name.toLowerCase().endsWith('.csv')) {
+                    Swal.fire('Atenção', 'Apenas arquivos CSV são permitidos.', 'warning');
+                    this.$refs.fileInput.value = '';
+                    this.arquivoSelecionado = '';
+                    return;
+                }
+                this.arquivoSelecionado = `${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+                this.resultadoLote = null;
+            } else {
+                this.arquivoSelecionado = '';
+            }
+        },
+
+        async processarLoteMatriculas() {
+            const fileInput = this.$refs.fileInput;
+            if (!fileInput || !fileInput.files.length) {
+                Swal.fire('Atenção', 'Selecione um arquivo CSV primeiro.', 'warning');
+                return;
+            }
+
+            const confirm = await Swal.fire({
+                title: 'Confirmar Atualização em Lote',
+                html: `Você está prestes a atualizar as matrículas de <strong>todos</strong> os usuários encontrados no arquivo.<br><br>
+                       <small class="text-muted">Matrículas existentes serão sobrescritas.</small>`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#198754',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Sim, processar',
+                cancelButtonText: 'Cancelar'
+            });
+
+            if (!confirm.isConfirmed) return;
+
+            this.processandoLote = true;
+            this.resultadoLote = null;
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            try {
+                const response = await fetch('/api/usuarios/atualizar-matriculas-lote', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    this.resultadoLote = data.resultados;
+                    Toast.fire({ icon: 'success', title: `${data.resultados.sucesso} matrícula(s) atualizada(s)!` });
+                    await this.carregarUsuarios();
+                    this.filtrarUsuarios();
+                } else {
+                    Swal.fire('Erro', data.erro || 'Falha ao processar o arquivo', 'error');
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+                Swal.fire('Erro', 'Falha na comunicação com o servidor', 'error');
+            } finally {
+                this.processandoLote = false;
+            }
         }
     }
 }

@@ -708,6 +708,130 @@ def contar_ativos_por_status() -> List[sqlite3.Row]:
 
 
 # ============================================================================
+# DASHBOARD - FUNÇÕES DE AGREGAÇÃO
+# ============================================================================
+
+def contar_usuarios_ativos() -> int:
+    """Retorna o total de usuários ativos"""
+    with get_db_connection() as conn:
+        return conn.execute("SELECT COUNT(*) FROM usuarios WHERE status = 'Ativo'").fetchone()[0]
+
+
+def contar_usuarios_inativos() -> int:
+    """Retorna o total de usuários inativos"""
+    with get_db_connection() as conn:
+        return conn.execute("SELECT COUNT(*) FROM usuarios WHERE status = 'Inativo'").fetchone()[0]
+
+
+def contar_empresas() -> int:
+    """Retorna o total de empresas cadastradas"""
+    with get_db_connection() as conn:
+        return conn.execute("SELECT COUNT(*) FROM empresas").fetchone()[0]
+
+
+def contar_locais_ativos() -> int:
+    """Retorna o total de locais ativos"""
+    with get_db_connection() as conn:
+        return conn.execute("SELECT COUNT(*) FROM locais WHERE ativo = 1").fetchone()[0]
+
+
+def contar_setores_ativos() -> int:
+    """Retorna o total de setores ativos"""
+    with get_db_connection() as conn:
+        return conn.execute("SELECT COUNT(*) FROM setores WHERE ativo = 1").fetchone()[0]
+
+
+def contar_ativos_por_tipo() -> List[sqlite3.Row]:
+    """Retorna contagem de ativos por tipo"""
+    with get_db_connection() as conn:
+        return conn.execute(
+            "SELECT tipo_ativo, COUNT(*) as total FROM ativos GROUP BY tipo_ativo ORDER BY total DESC"
+        ).fetchall()
+
+
+def contar_ativos_por_categoria() -> List[sqlite3.Row]:
+    """Retorna contagem de ativos por categoria (top 10)"""
+    with get_db_connection() as conn:
+        return conn.execute(
+            "SELECT categoria, COUNT(*) as total FROM ativos GROUP BY categoria ORDER BY total DESC LIMIT 10"
+        ).fetchall()
+
+
+def contar_ativos_por_proprietario() -> List[sqlite3.Row]:
+    """Retorna contagem de ativos por empresa proprietária"""
+    with get_db_connection() as conn:
+        return conn.execute("""
+            SELECT e.nome as proprietario_nome, COUNT(a.id) as total
+            FROM ativos a
+            LEFT JOIN empresas e ON a.proprietario_id = e.id
+            GROUP BY e.nome
+            ORDER BY total DESC
+            LIMIT 10
+        """).fetchall()
+
+
+def contar_ativos_por_local() -> List[sqlite3.Row]:
+    """Retorna contagem de ativos por local (top 10)"""
+    with get_db_connection() as conn:
+        return conn.execute("""
+            SELECT l.nome as local_nome, COUNT(a.id) as total
+            FROM ativos a
+            LEFT JOIN locais l ON a.local_atual_id = l.id
+            GROUP BY l.nome
+            ORDER BY total DESC
+            LIMIT 10
+        """).fetchall()
+
+
+def buscar_ativos_recentes(limite: int = 5) -> List[sqlite3.Row]:
+    """Retorna os últimos ativos cadastrados"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT a.*, e.nome as proprietario_nome, u.nome_completo as usuario_nome,
+                   l.nome as local_nome
+            FROM ativos a
+            LEFT JOIN empresas e ON a.proprietario_id = e.id
+            LEFT JOIN usuarios u ON a.usuario_atual_id = u.id
+            LEFT JOIN locais l ON a.local_atual_id = l.id
+            ORDER BY a.id DESC
+            LIMIT ?
+        """, (limite,))
+        return cursor.fetchall()
+
+
+def buscar_ativos_com_defeito() -> List[sqlite3.Row]:
+    """Retorna ativos com status 'Com Defeito'"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT a.*, e.nome as proprietario_nome, u.nome_completo as usuario_nome,
+                   l.nome as local_nome
+            FROM ativos a
+            LEFT JOIN empresas e ON a.proprietario_id = e.id
+            LEFT JOIN usuarios u ON a.usuario_atual_id = u.id
+            LEFT JOIN locais l ON a.local_atual_id = l.id
+            WHERE a.status = 'Com Defeito'
+            ORDER BY a.data_atualizacao DESC
+        """)
+        return cursor.fetchall()
+
+
+def buscar_ativos_sem_usuario() -> List[sqlite3.Row]:
+    """Retorna ativos 'Em uso' sem usuário vinculado (inconsistência)"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT a.*, e.nome as proprietario_nome, l.nome as local_nome
+            FROM ativos a
+            LEFT JOIN empresas e ON a.proprietario_id = e.id
+            LEFT JOIN locais l ON a.local_atual_id = l.id
+            WHERE a.status = 'Em uso' AND (a.usuario_atual_id IS NULL OR a.usuario_atual_id = '')
+            ORDER BY a.id DESC
+        """)
+        return cursor.fetchall()
+
+# ============================================================================
 # CONTRATOS E SOLICITAÇÕES
 # ============================================================================
 

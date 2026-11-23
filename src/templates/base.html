@@ -1,243 +1,834 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}Sistema de Gestão de Ativos{% endblock %} | CTC INFRA</title>
+  
+  <!-- Google Fonts: Source Sans Pro (AdminLTE) -->
+  <link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@300;400;600;700&display=swap" rel="stylesheet">
   
   <!-- Bootstrap 5 CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-   
-  <!-- Ícones Bootstrap -->
+  
+  <!-- Font Awesome 6 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  
+  <!-- Bootstrap Icons -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
   
   <!-- DataTables CSS -->
   <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
   <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css">
-  <link rel="stylesheet" href="https://cdn.datatables.net/colreorder/1.7.0/css/colReorder.bootstrap5.min.css">
   
-  <!-- SweetAlert2 CSS (Alertas profissionais) -->
+  <!-- SweetAlert2 CSS -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
   
-  <!-- Choices.js CSS (Selects com busca) -->
+  <!-- Choices.js CSS -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css">
   
-  <!-- Chart.js (Dashboards) -->
+  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   
-  <!-- Seu CSS personalizado -->
   <style>
     :root {
-      --dark: #1a1a2e;
-      --darker: #0f3460;
-      --accent: #e94560;
+      /* Paleta AdminLTE */
+      --sidebar-bg: #343a40;
+      --sidebar-width: 250px;
+      --sidebar-collapsed-width: 60px;
+      --sidebar-hover: rgba(255, 255, 255, 0.1);
+      --sidebar-active-bg: rgba(0, 123, 255, 0.15);
+      --sidebar-active-border: #007bff;
+      --content-bg: #f4f6f9;
+      --card-bg: #ffffff;
+      --navbar-bg: #ffffff;
+      --primary: #007bff;
+      --text-primary: #212529;
+      --text-muted: #6c757d;
+      --border-color: #dee2e6;
+      --transition-speed: 0.3s;
+    }
+    
+    * {
+      box-sizing: border-box;
     }
     
     body {
-      background-color: #f8f9fa;
+      font-family: 'Source Sans Pro', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background-color: var(--content-bg);
+      color: var(--text-primary);
+      font-size: 14px;
+      margin: 0;
+      padding: 0;
+      overflow-x: hidden;
     }
     
-    .sidebar {
-      background: var(--dark);
+    /* ===== WRAPPER PRINCIPAL ===== */
+    .wrapper {
+      display: flex;
+      flex-direction: column;
       min-height: 100vh;
-      width: 260px;
-      position: fixed;
+    }
+    
+    /* ===== NAVBAR SUPERIOR INTEGRADA ===== */
+    .main-header {
+      background: var(--navbar-bg);
+      border-bottom: 1px solid var(--border-color);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+      position: sticky;
       top: 0;
-      left: 0;
-      z-index: 1000;
+      z-index: 1030;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      padding: 0 1rem;
+      margin-left: var(--sidebar-width);
+      transition: margin-left var(--transition-speed) ease;
     }
     
-    .sidebar .nav-link {
-      color: rgba(255,255,255,0.75);
-      border-radius: 6px;
-      margin-bottom: 4px;
-      transition: all 0.2s;
+    .main-header .nav-link {
+      color: var(--text-muted);
+      padding: 0.5rem 1rem;
+      border-radius: 0.25rem;
+      transition: all 0.2s ease;
     }
     
-    .sidebar .nav-link:hover,
-    .sidebar .nav-link.active {
-      color: white;
-      background: rgba(255,255,255,0.1);
+    .main-header .nav-link:hover {
+      background: var(--content-bg);
+      color: var(--text-primary);
     }
     
-    .sidebar .nav-link i {
-      width: 24px;
-      text-align: center;
+    .main-header .dropdown-menu {
+      border: 1px solid var(--border-color);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      border-radius: 0.375rem;
     }
     
-    .main-content {
-      margin-left: 260px;
+    .main-header .dropdown-item {
+      padding: 0.5rem 1rem;
+      font-size: 0.9rem;
+    }
+    
+    .main-header .dropdown-item:hover {
+      background: var(--content-bg);
+    }
+    
+    .main-header .dropdown-item.text-danger:hover {
+      background: #fee;
+      color: #dc3545 !important;
+    }
+    
+    /* ===== SIDEBAR ===== */
+    .main-sidebar {
+      background: var(--sidebar-bg);
+      width: var(--sidebar-width);
       min-height: 100vh;
+      position: fixed;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      z-index: 1020;
+      overflow-y: auto;
+      overflow-x: hidden;
+      transition: width var(--transition-speed) ease;
       display: flex;
       flex-direction: column;
     }
     
-    .btn-accent {
-      background: var(--accent);
-      border-color: var(--accent);
-      color: white;
+    .main-sidebar.collapsed {
+      width: var(--sidebar-collapsed-width);
     }
     
-    .btn-accent:hover {
-      background: #d03750;
-      border-color: #d03750;
-      color: white;
+    .brand-link {
+      display: flex;
+      align-items: center;
+      padding: 0.8125rem 1rem;
+      border-bottom: 1px solid #4b545c;
+      color: rgba(255, 255, 255, 0.8);
+      text-decoration: none;
+      font-size: 1.25rem;
+      font-weight: 300;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+      overflow: hidden;
     }
     
-    .card-accent {
-      border-left: 4px solid var(--accent);
+    .brand-link:hover {
+      color: #fff;
+      text-decoration: none;
+      background: rgba(255, 255, 255, 0.05);
+    }
+    
+    .brand-link i {
+      margin-right: 0.75rem;
+      font-size: 1.4rem;
+      color: var(--primary);
+      flex-shrink: 0;
+    }
+    
+    .brand-link .brand-text {
+      transition: opacity var(--transition-speed) ease;
+    }
+    
+    .main-sidebar.collapsed .brand-text {
+      opacity: 0;
+      width: 0;
+    }
+    
+    /* User Panel na Sidebar */
+    .user-panel {
+      display: flex;
+      align-items: center;
+      padding: 1rem;
+      border-bottom: 1px solid #4b545c;
+      transition: all var(--transition-speed) ease;
+    }
+    
+    .main-sidebar.collapsed .user-panel {
+      padding: 0.5rem;
+      justify-content: center;
+    }
+    
+    .user-panel .image {
+      flex-shrink: 0;
+    }
+    
+    .user-panel .avatar {
+      width: 35px;
+      height: 35px;
+      border-radius: 50%;
+      background: var(--primary);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 1rem;
+    }
+    
+    .user-panel .info {
+      margin-left: 0.75rem;
+      overflow: hidden;
+      transition: opacity var(--transition-speed) ease;
+    }
+    
+    .main-sidebar.collapsed .user-panel .info {
+      opacity: 0;
+      width: 0;
+      margin-left: 0;
+    }
+    
+    .user-panel .info a {
+      color: #fff;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.95rem;
+      display: block;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    .user-panel .info .role {
+      font-size: 0.75rem;
+      color: rgba(255, 255, 255, 0.5);
+      margin-top: 2px;
+    }
+    
+    /* Menu da Sidebar */
+    .sidebar-menu {
+      list-style: none;
+      padding: 0.5rem 0;
+      margin: 0;
+      flex: 1;
+    }
+    
+    .sidebar-menu .nav-item {
+      margin: 0;
+    }
+    
+    .sidebar-menu .nav-link {
+      display: flex;
+      align-items: center;
+      padding: 0.75rem 1rem;
+      color: rgba(255, 255, 255, 0.75);
+      text-decoration: none;
+      transition: all 0.2s ease;
+      border-left: 3px solid transparent;
+      font-size: 0.95rem;
+      white-space: nowrap;
+      overflow: hidden;
+    }
+    
+    .sidebar-menu .nav-link:hover {
+      background: var(--sidebar-hover);
+      color: #fff;
+      border-left-color: rgba(255, 255, 255, 0.3);
+    }
+    
+    .sidebar-menu .nav-link.active {
+      background: var(--sidebar-active-bg);
+      color: #fff;
+      border-left-color: var(--sidebar-active-border);
+    }
+    
+    .sidebar-menu .nav-link i {
+      width: 1.6rem;
+      margin-right: 0.75rem;
+      text-align: center;
+      font-size: 1rem;
+      flex-shrink: 0;
+    }
+    
+    .sidebar-menu .nav-link p {
+      margin: 0;
+      font-size: 0.95rem;
+      transition: opacity var(--transition-speed) ease;
+    }
+    
+    .main-sidebar.collapsed .sidebar-menu .nav-link p {
+      opacity: 0;
+      width: 0;
+    }
+    
+    .main-sidebar.collapsed .sidebar-menu .nav-link {
+      padding: 0.75rem;
+      justify-content: center;
+    }
+    
+    .main-sidebar.collapsed .sidebar-menu .nav-link i {
+      margin-right: 0;
+    }
+    
+    /* Botão de Toggle */
+    .sidebar-toggle {
+      position: absolute;
+      right: -12px;
+      top: 20px;
+      width: 24px;
+      height: 24px;
+      background: var(--primary);
+      border: 2px solid #fff;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: white;
+      font-size: 0.7rem;
+      transition: all 0.2s ease;
+      z-index: 10;
+    }
+    
+    .sidebar-toggle:hover {
+      background: #0056b3;
+      transform: scale(1.1);
+    }
+    
+    .main-sidebar.collapsed .sidebar-toggle i {
+      transform: rotate(180deg);
+    }
+    
+    /* ===== CONTENT WRAPPER ===== */
+    .content-wrapper {
+      margin-left: var(--sidebar-width);
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: calc(100vh - 56px);
+      transition: margin-left var(--transition-speed) ease;
+    }
+    
+    .content-wrapper.expanded {
+      margin-left: var(--sidebar-collapsed-width);
+    }
+    
+    /* Content Header com Breadcrumb */
+    .content-header {
+      padding: 1rem 1.5rem;
+      background: var(--content-bg);
+      border-bottom: 1px solid var(--border-color);
+    }
+    
+    .content-header h1 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin: 0;
+      color: var(--text-primary);
+    }
+    
+    .content-header .breadcrumb {
+      background: transparent;
+      padding: 0;
+      margin: 0;
+      font-size: 0.875rem;
+    }
+    
+    .content-header .breadcrumb-item a {
+      color: var(--primary);
+      text-decoration: none;
+    }
+    
+    .content-header .breadcrumb-item.active {
+      color: var(--text-muted);
+    }
+    
+    /* Main Content */
+    .main-content {
+      padding: 1.5rem;
+      flex: 1;
+    }
+    
+    /* Cards estilo AdminLTE */
+    .card {
+      border: 0;
+      border-radius: 0.25rem;
+      box-shadow: 0 0 1px rgba(0, 0, 0, 0.125), 0 1px 3px rgba(0, 0, 0, 0.2);
+      margin-bottom: 1rem;
+      background: var(--card-bg);
+    }
+    
+    .card-header {
+      background: #fff;
+      border-bottom: 1px solid var(--border-color);
+      padding: 0.75rem 1.25rem;
+      font-weight: 600;
+    }
+    
+    .card-body {
+      padding: 1.25rem;
+    }
+    
+    /* Footer estilo AdminLTE */
+    .main-footer {
+      margin-left: var(--sidebar-width);
+      background: #fff;
+      border-top: 1px solid var(--border-color);
+      padding: 1rem 1.5rem;
+      color: var(--text-muted);
+      font-size: 0.875rem;
+      transition: margin-left var(--transition-speed) ease;
+    }
+    
+    .main-footer.expanded {
+      margin-left: var(--sidebar-collapsed-width);
+    }
+    
+    .main-footer a {
+      color: var(--primary);
+      text-decoration: none;
+    }
+    
+    .main-footer a:hover {
+      text-decoration: underline;
+    }
+    
+    /* ===== TOOLTIP PARA SIDEBAR COLAPSADA ===== */
+    .main-sidebar.collapsed .sidebar-menu .nav-link {
+      position: relative;
+    }
+    
+    .main-sidebar.collapsed .sidebar-menu .nav-link::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      left: 100%;
+      top: 50%;
+      transform: translateY(-50%);
+      background: #333;
+      color: white;
+      padding: 0.25rem 0.5rem;
+      border-radius: 0.25rem;
+      font-size: 0.75rem;
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+      margin-left: 0.5rem;
+      z-index: 1000;
+    }
+    
+    .main-sidebar.collapsed .sidebar-menu .nav-link:hover::after {
+      opacity: 1;
+    }
+    
+    /* ===== RESPONSIVO ===== */
+    @media (max-width: 768px) {
+      .main-sidebar {
+        transform: translateX(-100%);
+      }
+      .main-sidebar.mobile-show {
+        transform: translateX(0);
+      }
+      .content-wrapper, .main-footer, .main-header {
+        margin-left: 0;
+      }
+    }
+    
+    /* ===== ESTILOS DE TABELA (PADRONIZAÇÃO GLOBAL) ===== */
+    .table {
+      margin-bottom: 0;
+      font-size: 0.9rem;
+    }
+    
+    .table thead th {
+      border-top: none;
+      border-bottom: 2px solid #dee2e6;
+      font-weight: 600;
+      color: #495057;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.5px;
+      padding: 0.75rem 1rem;
+      background: #f8f9fa;
+    }
+    
+    .table tbody td {
+      padding: 0.875rem 1rem;
+      vertical-align: middle;
+      border-bottom: 1px solid #e9ecef;
+    }
+    
+    .table tbody tr:hover {
+      background-color: #f8f9fa;
+      transition: background-color 0.15s ease;
+    }
+    
+    .table tbody tr:last-child td {
+      border-bottom: none;
+    }
+    
+    /* Coluna de ações - botões lado a lado */
+    .table .col-actions {
+      text-align: right;
+      vertical-align: middle;
+      white-space: nowrap;
+      width: 1%;
+    }
+    
+    .table .action-buttons {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 4px;
+    }
+    
+    .table .btn-action {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      padding: 0;
+      margin: 0 2px;
+      border-radius: 0.25rem;
+      transition: all 0.2s ease;
+      vertical-align: middle;
+    }
+    
+    .table .btn-action:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .table .btn-action i {
+      font-size: 0.875rem;
+    }
+    
+    /* Badges na tabela */
+    .table .badge {
+      font-size: 0.75rem;
+      padding: 0.35em 0.65em;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+    }
+    
+    /* Texto secundário (patrimônio, série) */
+    .table .text-muted {
+      font-size: 0.8rem;
+    }
+    
+    .table .fw-bold {
+      font-size: 0.95rem;
+    }
+    
+    /* Empty state */
+    .table .empty-state {
+      padding: 3rem 1rem;
+      text-align: center;
+      color: #6c757d;
+    }
+    
+    .table .empty-state i {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+      opacity: 0.5;
+    }
+    
+    /* Responsivo tabela */
+    @media (max-width: 768px) {
+      .table {
+        font-size: 0.8rem;
+      }
+      
+      .table thead th,
+      .table tbody td {
+        padding: 0.5rem 0.75rem;
+      }
+      
+      .table .btn-action {
+        width: 28px;
+        height: 28px;
+      }
+    }
+    
+    /* Utility classes AdminLTE */
+    .text-sm {
+      font-size: 0.875rem !important;
+    }
+    
+    .elevation-2 {
+      box-shadow: 0 3px 6px rgba(0, 0, 0, 0.16), 0 3px 6px rgba(0, 0, 0, 0.23);
     }
     
     /* Ajustes para Choices.js */
     .choices__inner {
       min-height: 38px;
       padding: 4px 8px;
+      border-radius: 0.375rem;
     }
     
-    /* Footer */
-    footer {
-      font-size: 0.85rem;
-      margin-top: auto;
+    /* Scrollbar da sidebar */
+    .main-sidebar::-webkit-scrollbar {
+      width: 6px;
     }
     
-    footer a {
-      color: var(--darker);
-      transition: color 0.2s;
+    .main-sidebar::-webkit-scrollbar-track {
+      background: #2c3136;
     }
     
-    footer a:hover {
-      color: var(--accent);
-      text-decoration: underline;
+    .main-sidebar::-webkit-scrollbar-thumb {
+      background: #4b545c;
+      border-radius: 3px;
+    }
+    
+    .main-sidebar::-webkit-scrollbar-thumb:hover {
+      background: #5a6268;
+    }
+    
+    /* Avatar na navbar */
+    .user-avatar-sm {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--primary);
+      color: white;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 0.9rem;
+      margin-right: 0.5rem;
     }
   </style>
   
   {% block extra_css %}{% endblock %}
 </head>
 <body>
-  <!-- Sidebar -->
-  <nav class="sidebar flex-column p-3">
-    <a href="/dashboard" class="d-flex align-items-center text-white text-decoration-none mb-4 px-2">
-      <i class="bi bi-gear-fill fs-4 me-2"></i>
-      <span class="fs-5 fw-bold">Gestão de Ativos</span>
-    </a>
-    <ul class="nav nav-pills flex-column">
-      <li class="nav-item">
-        <a class="nav-link {% if request.endpoint == 'web.dashboard' %}active{% endif %}" href="/dashboard">
-          <i class="bi bi-speedometer2"></i> Dashboard
-        </a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link {% if request.endpoint == 'web.gerenciar_ativos' %}active{% endif %}" href="/ativos">
-          <i class="bi bi-laptop"></i> Gerenciar Ativos
-        </a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link {% if request.endpoint == 'web.cadastrar_ativo' %}active{% endif %}" href="/ativos/cadastrar">
-          <i class="bi bi-plus-circle"></i> Cadastrar Ativo
-        </a>
-      </li>
-      <li class="nav-item">
-    <a class="nav-link {% if request.endpoint == 'web.gerenciar_usuarios' %}active{% endif %}" href="/usuarios">
-        <i class="bi bi-people"></i> Usuários
-    </a>
-</li>
-<li class="nav-item">
-    <a class="nav-link {% if request.endpoint == 'web.gerenciar_locais' %}active{% endif %}" href="/locais">
-        <i class="bi bi-geo-alt"></i> Locais
-    </a>
-</li>
-<li class="nav-item">
-    <a class="nav-link {% if request.endpoint == 'web.gerenciar_setores' %}active{% endif %}" href="/setores">
-        <i class="bi bi-diagram-3"></i> Setores
-    </a>
-</li>
-      <li class="nav-item">
-        <a class="nav-link {% if request.endpoint == 'web.upload_lote' %}active{% endif %}" href="/ativos/lote">
-          <i class="bi bi-file-earmark-arrow-up"></i> Upload em Lote
-        </a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link {% if request.endpoint == 'web.gerenciar_contratos' %}active{% endif %}" href="/contratos">
-          <i class="bi bi-file-contract"></i> Contratos
-        </a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link {% if request.endpoint == 'web.gerenciar_solicitacoes' %}active{% endif %}" href="/solicitacoes">
-          <i class="bi bi-clipboard-check"></i> Solicitações
-        </a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link {% if request.endpoint == 'web.gerenciar_usuarios' %}active{% endif %}" href="/usuarios">
-          <i class="bi bi-people"></i> Usuários
-        </a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link {% if request.endpoint == 'web.relatorios' %}active{% endif %}" href="/relatorios">
-          <i class="bi bi-file-earmark-bar-graph"></i> Relatórios
-        </a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link {% if request.endpoint == 'web.configuracoes' %}active{% endif %}" href="/configuracoes">
-          <i class="bi bi-gear"></i> Configurações
-        </a>
-      </li>
-    </ul>
-    
-    <div class="mt-auto pt-3 border-top border-secondary">
-      <a href="/logout" class="nav-link text-danger">
-        <i class="bi bi-box-arrow-right"></i> Sair do Sistema
+  <div class="wrapper">
+    <!-- ===== SIDEBAR ===== -->
+    <aside class="main-sidebar" id="mainSidebar">
+      <a href="/dashboard" class="brand-link">
+        <i class="fas fa-laptop-code"></i>
+        <span class="brand-text">Gestão de Ativos</span>
       </a>
-    </div>
-  </nav>
-
-  <!-- Main content -->
-  <main class="main-content">
-    <!-- Topbar com Flash Messages -->
-    <div class="container-fluid p-4">
-      {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-          {% for category, message in messages %}
-            <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show shadow-sm" role="alert">
-              {% if category == 'success' %}<i class="bi bi-check-circle-fill me-2"></i>
-              {% elif category == 'error' %}<i class="bi bi-exclamation-triangle-fill me-2"></i>
-              {% elif category == 'warning' %}<i class="bi bi-exclamation-circle-fill me-2"></i>
-              {% else %}<i class="bi bi-info-circle-fill me-2"></i>{% endif %}
-              {{ message }}
-              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-          {% endfor %}
-        {% endif %}
-      {% endwith %}
       
-      {% block content %}{% endblock %}
-    </div>
-
-    <!-- Footer -->
-    <footer class="bg-white border-top">
-      <div class="container-fluid py-3 px-4">
-        <div class="row align-items-center">
-          <div class="col-md-6 text-center text-md-start mb-2 mb-md-0">
-            <small class="text-muted">
-              &copy; <span id="current-year"></span> Vinicius. Todos os direitos reservados.
-            </small>
+      <!-- User Panel -->
+      <div class="user-panel">
+        <div class="image">
+          <div class="avatar">
+            {{ (current_user.nome_completo[0] if current_user else 'U') | upper }}
           </div>
-          <div class="col-md-6 text-center text-md-end">
-            <small class="text-muted">
-              Desenvolvido por <strong>Vinicius</strong> • 
-              Sistema de Gestão de Ativos • 
-              <strong>CTC INFRA</strong>
-            </small>
+        </div>
+        <div class="info">
+          <a href="#">{{ current_user.nome_completo if current_user else 'Usuário' }}</a>
+          <div class="role">{{ current_user.perfil if current_user else 'Visitante' }}</div>
+        </div>
+      </div>
+      
+      <!-- Botão de Toggle -->
+      <div class="sidebar-toggle" id="sidebarToggle" title="Recolher/Expandir">
+        <i class="fas fa-chevron-left"></i>
+      </div>
+      
+      <!-- Menu -->
+      <nav class="mt-2">
+        <ul class="sidebar-menu">
+          <li class="nav-item">
+            <a class="nav-link {% if request.endpoint == 'web.dashboard' %}active{% endif %}" href="/dashboard" data-tooltip="Dashboard">
+              <i class="fas fa-tachometer-alt"></i>
+              <p>Dashboard</p>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link {% if request.endpoint == 'web.gerenciar_ativos' %}active{% endif %}" href="/ativos" data-tooltip="Gerenciar Ativos">
+              <i class="fas fa-boxes-stacked"></i>
+              <p>Gerenciar Ativos</p>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link {% if request.endpoint == 'web.cadastrar_ativo' %}active{% endif %}" href="/ativos/cadastrar" data-tooltip="Cadastrar Ativo">
+              <i class="fas fa-plus-circle"></i>
+              <p>Cadastrar Ativo</p>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link {% if request.endpoint == 'web.gerenciar_usuarios' %}active{% endif %}" href="/usuarios" data-tooltip="Usuários">
+              <i class="fas fa-users"></i>
+              <p>Usuários</p>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link {% if request.endpoint == 'web.gerenciar_locais' %}active{% endif %}" href="/locais" data-tooltip="Locais">
+              <i class="fas fa-map-marker-alt"></i>
+              <p>Locais</p>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link {% if request.endpoint == 'web.gerenciar_setores' %}active{% endif %}" href="/setores" data-tooltip="Setores">
+              <i class="fas fa-sitemap"></i>
+              <p>Setores</p>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link {% if request.endpoint == 'web.upload_lote' %}active{% endif %}" href="/ativos/lote" data-tooltip="Upload em Lote">
+              <i class="fas fa-file-upload"></i>
+              <p>Upload em Lote</p>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link {% if request.endpoint == 'web.gerenciar_contratos' %}active{% endif %}" href="/contratos" data-tooltip="Contratos">
+              <i class="fas fa-file-contract"></i>
+              <p>Contratos</p>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link {% if request.endpoint == 'web.gerenciar_solicitacoes' %}active{% endif %}" href="/solicitacoes" data-tooltip="Solicitações">
+              <i class="fas fa-clipboard-list"></i>
+              <p>Solicitações</p>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link {% if request.endpoint == 'web.relatorios' %}active{% endif %}" href="/relatorios" data-tooltip="Relatórios">
+              <i class="fas fa-chart-bar"></i>
+              <p>Relatórios</p>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link {% if request.endpoint == 'web.configuracoes' %}active{% endif %}" href="/configuracoes" data-tooltip="Configurações">
+              <i class="fas fa-cog"></i>
+              <p>Configurações</p>
+            </a>
+          </li>
+        </ul>
+      </nav>
+    </aside>
+    
+    <!-- ===== NAVBAR SUPERIOR (Perfil à esquerda) ===== -->
+    <nav class="main-header" id="mainHeader">
+      <ul class="navbar-nav flex-row align-items-center mb-0">
+        <!-- Perfil do usuário no canto ESQUERDO -->
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <div class="user-avatar-sm">
+              {{ (current_user.nome_completo[0] if current_user else 'U') | upper }}
+            </div>
+            <div class="d-none d-md-inline ms-2">
+              <div class="fw-bold" style="font-size: 0.9rem; line-height: 1.2;">
+                {{ current_user.nome_completo if current_user else 'Usuário' }}
+              </div>
+              <div class="text-muted text-sm" style="font-size: 0.75rem;">
+                {{ current_user.perfil if current_user else 'Visitante' }}
+              </div>
+            </div>
+          </a>
+          <ul class="dropdown-menu dropdown-menu-start">
+            <li class="px-3 py-2 border-bottom">
+              <div class="text-sm text-muted">Logado como</div>
+              <div class="fw-bold">{{ current_user.nome_completo if current_user else 'Usuário' }}</div>
+              <div class="text-sm text-muted">{{ current_user.perfil if current_user else 'Visitante' }}</div>
+            </li>
+            <li><a href="/perfil" class="dropdown-item"><i class="fas fa-user me-2"></i>Meu Perfil</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><a href="/logout" class="dropdown-item text-danger"><i class="fas fa-sign-out-alt me-2"></i>Sair do Sistema</a></li>
+          </ul>
+        </li>
+      </ul>
+      
+      <!-- Subtítulo da página no centro/direita -->
+      <ul class="navbar-nav ms-auto align-items-center">
+        <li class="nav-item d-none d-sm-inline-block">
+          <span class="navbar-text text-muted text-sm">
+            {% block page_subtitle %}Sistema de Gestão de Ativos{% endblock %}
+          </span>
+        </li>
+      </ul>
+    </nav>
+    
+    <!-- ===== CONTENT WRAPPER ===== -->
+    <div class="content-wrapper" id="contentWrapper">
+      <!-- Content Header -->
+      <div class="content-header">
+        <div class="container-fluid">
+          <div class="row mb-2">
+            <div class="col-sm-6">
+              <h1 class="m-0">{% block page_title %}{% endblock %}</h1>
+            </div>
+            <div class="col-sm-6">
+              <ol class="breadcrumb float-sm-end">
+                <li class="breadcrumb-item"><a href="/dashboard"><i class="fas fa-home me-1"></i>Home</a></li>
+                <li class="breadcrumb-item active">{% block breadcrumb_active %}{% endblock %}</li>
+              </ol>
+            </div>
           </div>
         </div>
       </div>
+      
+      <!-- Flash Messages -->
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <div class="container-fluid px-4">
+            {% for category, message in messages %}
+              <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show shadow-sm" role="alert">
+                {% if category == 'success' %}<i class="fas fa-check-circle me-2"></i>
+                {% elif category == 'error' %}<i class="fas fa-exclamation-triangle me-2"></i>
+                {% elif category == 'warning' %}<i class="fas fa-exclamation-circle me-2"></i>
+                {% else %}<i class="fas fa-info-circle me-2"></i>{% endif %}
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+      
+      <!-- Main Content -->
+      <section class="main-content">
+        {% block content %}{% endblock %}
+      </section>
+    </div>
+    
+    <!-- ===== FOOTER ===== -->
+    <footer class="main-footer" id="mainFooter">
+      <div class="float-end d-none d-sm-inline-block">
+        <b>Versão</b> 2.0
+      </div>
+      <strong>Copyright &copy; <span id="current-year">2024</span> <a href="#">CTC INFRA</a>.</strong>
+      Todos os direitos reservados. Desenvolvido por Vinicius.
     </footer>
-  </main>
-
-  <!-- ======================================================================= -->
-  <!-- BIBLIOTECAS JAVASCRIPT -->
-  <!-- ======================================================================= -->
+  </div>
   
-    <!-- jQuery (obrigatório para DataTables) -->
+  <!-- jQuery -->
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
   
   <!-- Bootstrap JS -->
@@ -248,23 +839,47 @@
   <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
   <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
   <script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap5.min.js"></script>
-  <script src="https://cdn.datatables.net/colreorder/1.7.0/js/dataTables.colReorder.min.js"></script>
   
-  <!-- SweetAlert2 JS (Alertas profissionais) -->
+  <!-- SweetAlert2 JS -->
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   
-  <!-- Choices.js JS (Selects avançados com busca) -->
+  <!-- Choices.js JS -->
   <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
   
-  <!-- Alpine.js (Reatividade leve) - DEFER garante execução após DOM -->
+  <!-- Alpine.js -->
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
   
-  <!-- Scripts Globais -->
+  <!-- Scripts globais -->
   <script>
-    // Ano atual no footer
-    document.getElementById('current-year').textContent = new Date().getFullYear();
+    // ===== SIDEBAR TOGGLE =====
+    document.addEventListener('DOMContentLoaded', function() {
+      const sidebar = document.getElementById('mainSidebar');
+      const contentWrapper = document.getElementById('contentWrapper');
+      const mainFooter = document.getElementById('mainFooter');
+      const toggleBtn = document.getElementById('sidebarToggle');
+      
+      if (!sidebar || !contentWrapper || !mainFooter || !toggleBtn) return;
+      
+      // Verifica se há preferência salva
+      const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+      if (isCollapsed) {
+        sidebar.classList.add('collapsed');
+        contentWrapper.classList.add('expanded');
+        mainFooter.classList.add('expanded');
+      }
+      
+      // Toggle click
+      toggleBtn.addEventListener('click', function() {
+        sidebar.classList.toggle('collapsed');
+        contentWrapper.classList.toggle('expanded');
+        mainFooter.classList.toggle('expanded');
+        
+        const collapsed = sidebar.classList.contains('collapsed');
+        localStorage.setItem('sidebarCollapsed', collapsed);
+      });
+    });
     
-    // ✅ CORREÇÃO 1: Usar API correta do SweetAlert2 (mixin, não setDefaults)
+    // Toast global
     const Toast = Swal.mixin({
       toast: true,
       position: 'top-end',
@@ -277,8 +892,7 @@
       }
     });
     
-    // ✅ CORREÇÃO 2: Inicializar Choices.js de forma LAZY (sob demanda)
-    // Função global para inicializar um select específico
+    // Inicialização Choices.js
     window.initChoices = function(element) {
       if (!element || element.choicesInstance) return;
       try {
@@ -295,7 +909,6 @@
       }
     };
     
-    // ✅ CORREÇÃO 3: Função global para DESTRUIR Choices.js (necessário ao fechar modal)
     window.destroyChoices = function(element) {
       if (element && element.choicesInstance) {
         try {
@@ -306,6 +919,12 @@
         }
       }
     };
+    
+    // Ano atual no footer
+    document.addEventListener('DOMContentLoaded', function() {
+      const yearEl = document.getElementById('current-year');
+      if (yearEl) yearEl.textContent = new Date().getFullYear();
+    });
   </script>
   
   {% block extra_js %}{% endblock %}
