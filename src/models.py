@@ -475,13 +475,14 @@ def buscar_ativos(filtros: Optional[Dict[str, Any]] = None) -> List[sqlite3.Row]
     with get_db_connection() as conn:
         cursor = conn.cursor()
         query = """
-            SELECT a.*, e.nome as proprietario_nome, u.nome_completo as usuario_nome,
-                   l.nome as local_nome, l.ambiente as local_ambiente, l.predio as local_predio, l.setor as local_setor
-            FROM ativos a
-            LEFT JOIN empresas e ON a.proprietario_id = e.id
-            LEFT JOIN usuarios u ON a.usuario_atual_id = u.id
-            LEFT JOIN locais l ON a.local_atual_id = l.id
-            WHERE 1=1
+        SELECT a.*, e.nome as proprietario_nome, u.nome_completo as usuario_nome,
+        l.nome as local_nome, l.ambiente as local_ambiente, l.predio as local_predio, l.setor as local_setor,
+        (SELECT valor FROM atributos_ativos WHERE ativo_id = a.id AND chave = 'host_name' LIMIT 1) as hostname
+        FROM ativos a
+        LEFT JOIN empresas e ON a.proprietario_id = e.id
+        LEFT JOIN usuarios u ON a.usuario_atual_id = u.id
+        LEFT JOIN locais l ON a.local_atual_id = l.id
+        WHERE 1=1
         """
         params = []
         if filtros:
@@ -516,10 +517,13 @@ def buscar_ativos(filtros: Optional[Dict[str, Any]] = None) -> List[sqlite3.Row]
             if filtros.get('usuario'):
                 query += " AND u.nome_completo LIKE ?"
                 params.append(f"%{filtros['usuario']}%")
+            if filtros.get('hostname'):
+                query += " AND hostname LIKE ?"
+                params.append(f"%{filtros['hostname']}%")
+                
         query += " ORDER BY a.codigo_ativo"
         cursor.execute(query, params)
         return cursor.fetchall()
-
 
 def criar_ativo(dados: Dict[str, Any]) -> int:
     """Cria um novo ativo (com sanitização robusta)"""

@@ -2,32 +2,36 @@
 
 {% block title %}Gerenciar Usuários{% endblock %}
 
+{% block page_title %}Gerenciar Usuários{% endblock %}
+{% block page_subtitle %}Módulo de Usuários{% endblock %}
+{% block breadcrumb_active %}Usuários{% endblock %}
+
 {% block content %}
-<div class="container-fluid mt-4" x-data="gerenciarUsuarios()">
+<div class="container-fluid" x-data="gerenciarUsuarios()">
     <!-- Header -->
     <div class="row mb-4 align-items-center">
         <div class="col-md-8">
             <h2 class="mb-0">
-                <i class="bi bi-people-fill me-2"></i>Gerenciar Usuários
+                <i class="fas fa-users me-2 text-primary"></i>Gerenciar Usuários
             </h2>
             <p class="text-muted mb-0">Cadastre e gerencie os colaboradores do sistema</p>
         </div>
         <div class="col-md-4 text-end">
             <button class="btn btn-outline-success me-2" @click="abrirModalLote()">
-                <i class="bi bi-file-earmark-spreadsheet me-2"></i>Atualizar Matrículas (Lote)
+                <i class="fas fa-file-csv me-2"></i>Atualizar Matrículas (Lote)
             </button>
             <button class="btn btn-primary" @click="abrirModal()">
-                <i class="bi bi-plus-circle me-2"></i>Novo Usuário
+                <i class="fas fa-plus-circle me-2"></i>Novo Usuário
             </button>
         </div>
     </div>
 
     <!-- Filtros Rápidos -->
-    <div class="card mb-4 shadow-sm">
+    <div class="card mb-3">
         <div class="card-body">
             <div class="row g-3">
                 <div class="col-md-6">
-                    <input type="text" class="form-control" placeholder="Buscar por nome, email ou matrícula..." 
+                    <input type="text" class="form-control" placeholder="Buscar por nome, email ou matrícula..."
                            x-model="filtroBusca" @input="filtrarUsuarios()">
                 </div>
                 <div class="col-md-3">
@@ -51,11 +55,11 @@
     </div>
 
     <!-- Tabela de Usuários -->
-    <div class="card shadow-sm">
+    <div class="card">
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light">
+                    <thead>
                         <tr>
                             <th class="ps-4">Nome</th>
                             <th>Email</th>
@@ -71,9 +75,11 @@
                     <tbody>
                         <template x-if="usuariosFiltrados.length === 0">
                             <tr>
-                                <td colspan="9" class="text-center py-5 text-muted">
-                                    <i class="bi bi-inbox fs-1 d-block mb-2"></i>
-                                    Nenhum usuário encontrado
+                                <td colspan="9">
+                                    <div class="empty-state">
+                                        <i class="fas fa-inbox"></i>
+                                        <p>Nenhum usuário encontrado</p>
+                                    </div>
                                 </td>
                             </tr>
                         </template>
@@ -93,7 +99,7 @@
                                 <td><span class="badge bg-info bg-opacity-10 text-info" x-text="usuario.setor_nome || '-'"></span></td>
                                 <td x-text="usuario.local_nome || '-'"></td>
                                 <td>
-                                    <span class="badge" 
+                                    <span class="badge"
                                           :class="{
                                             'bg-danger': usuario.perfil_nome === 'Administrador',
                                             'bg-warning text-dark': usuario.perfil_nome === 'Gestor',
@@ -103,7 +109,7 @@
                                           x-text="usuario.perfil_nome"></span>
                                 </td>
                                 <td>
-                                    <span class="badge" 
+                                    <span class="badge"
                                           :class="{
                                             'bg-success': usuario.status === 'Ativo',
                                             'bg-secondary': usuario.status === 'Inativo',
@@ -111,13 +117,16 @@
                                           }"
                                           x-text="usuario.status"></span>
                                 </td>
-                                <td class="text-end pe-4">
-                                    <button class="btn btn-sm btn-outline-primary me-1" @click="editarUsuario(usuario)" title="Editar">
-                                        <i class="bi bi-pencil"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-outline-danger" @click="confirmarExclusao(usuario)" title="Excluir">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
+                                <!-- ✅ COLUNA DE AÇÕES PADRONIZADA -->
+                                <td class="col-actions">
+                                    <div class="action-buttons">
+                                        <button class="btn btn-outline-primary btn-action" @click="editarUsuario(usuario)" title="Editar">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-outline-danger btn-action" @click="confirmarExclusao(usuario)" title="Excluir">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         </template>
@@ -125,6 +134,7 @@
                 </table>
             </div>
         </div>
+        <!-- Contador de registros -->
         <div class="card-footer bg-light text-muted small d-flex justify-content-between align-items-center">
             <span>
                 Exibindo <strong x-text="usuariosFiltrados.length"></strong> de <strong x-text="usuarios.length"></strong> usuários
@@ -135,13 +145,13 @@
         </div>
     </div>
 
-    <!-- ==================== MODAL: Cadastro/Edição ==================== -->
+    <!-- Modal de Cadastro/Edição -->
     <div class="modal fade" id="modalUsuario" tabindex="-1" x-ref="modalUsuario">
         <div class="modal-dialog modal-lg modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header bg-primary text-white">
                     <h5 class="modal-title">
-                        <i class="bi bi-person-plus me-2"></i>
+                        <i class="fas fa-user-plus me-2"></i>
                         <span x-text="editandoId ? 'Editar Usuário' : 'Novo Usuário'"></span>
                     </h5>
                     <button type="button" class="btn-close btn-close-white" @click="fecharModal()"></button>
@@ -151,14 +161,14 @@
                         <div class="row g-3">
                             <div class="col-md-12">
                                 <label class="form-label">Nome Completo *</label>
-                                <input type="text" class="form-control" :class="{'is-invalid': erros.nome_completo}" 
+                                <input type="text" class="form-control" :class="{'is-invalid': erros.nome_completo}"
                                        x-model="form.nome_completo" placeholder="Ex: JOÃO DA SILVA">
                                 <div class="invalid-feedback" x-show="erros.nome_completo" x-text="erros.nome_completo"></div>
                             </div>
 
                             <div class="col-md-6">
                                 <label class="form-label">Email *</label>
-                                <input type="email" class="form-control" :class="{'is-invalid': erros.email}" 
+                                <input type="email" class="form-control" :class="{'is-invalid': erros.email}"
                                        x-model="form.email" placeholder="ex: joao.silva@ctcinfra.com.br">
                                 <div class="invalid-feedback" x-show="erros.email" x-text="erros.email"></div>
                             </div>
@@ -168,10 +178,9 @@
                                 <input type="text" class="form-control" x-model="form.matricula" placeholder="Ex: 10025">
                             </div>
 
-                            <!-- ✅ Selects com IDs únicos para manipulação via JS vanilla -->
                             <div class="col-md-6">
                                 <label class="form-label">Cargo</label>
-                                <select class="form-select" id="select-cargo" x-model="form.cargo_id">
+                                <select class="form-select" x-model="form.cargo_id">
                                     <option value="">Selecione...</option>
                                     <template x-for="cargo in cargos" :key="cargo.id">
                                         <option :value="cargo.id" x-text="cargo.nome"></option>
@@ -181,7 +190,7 @@
 
                             <div class="col-md-6">
                                 <label class="form-label">Setor</label>
-                                <select class="form-select" id="select-setor" x-model="form.setor_id">
+                                <select class="form-select" x-model="form.setor_id">
                                     <option value="">Selecione...</option>
                                     <template x-for="setor in setores" :key="setor.id">
                                         <option :value="setor.id" x-text="setor.nome"></option>
@@ -191,7 +200,7 @@
 
                             <div class="col-md-6">
                                 <label class="form-label">Local Padrão</label>
-                                <select class="form-select" id="select-local" x-model="form.local_padrao_id">
+                                <select class="form-select" x-model="form.local_padrao_id">
                                     <option value="">Selecione...</option>
                                     <template x-for="local in locais" :key="local.id">
                                         <option :value="local.id" x-text="local.nome"></option>
@@ -201,7 +210,7 @@
 
                             <div class="col-md-6">
                                 <label class="form-label">Perfil de Acesso *</label>
-                                <select class="form-select" :class="{'is-invalid': erros.perfil_id}" id="select-perfil" x-model="form.perfil_id">
+                                <select class="form-select" :class="{'is-invalid': erros.perfil_id}" x-model="form.perfil_id">
                                     <option value="">Selecione...</option>
                                     <template x-for="perfil in perfis" :key="perfil.id">
                                         <option :value="perfil.id" x-text="perfil.nome"></option>
@@ -221,7 +230,7 @@
 
                             <div class="col-md-6" x-show="!editandoId">
                                 <label class="form-label">Senha Inicial</label>
-                                <input type="password" class="form-control" x-model="form.senha" 
+                                <input type="password" class="form-control" x-model="form.senha"
                                        placeholder="Deixe vazio para usar: mudar123">
                             </div>
                         </div>
@@ -239,32 +248,32 @@
         </div>
     </div>
 
-    <!-- ==================== MODAL: Atualização em Lote ==================== -->
+    <!-- Modal de Atualização em Lote -->
     <div class="modal fade" id="modalLoteMatriculas" tabindex="-1" x-ref="modalLote">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header bg-success text-white">
                     <h5 class="modal-title">
-                        <i class="bi bi-file-earmark-spreadsheet me-2"></i>Atualizar Matrículas em Lote
+                        <i class="fas fa-file-csv me-2"></i>Atualizar Matrículas em Lote
                     </h5>
                     <button type="button" class="btn-close btn-close-white" @click="fecharModalLote()"></button>
                 </div>
                 <div class="modal-body">
                     <div class="alert alert-info small">
-                        <i class="bi bi-info-circle me-2"></i>
-                        <strong>Instruções:</strong> O arquivo CSV deve conter as colunas <code>email</code> e <code>matricula</code>, 
-                        separadas por ponto e vírgula (<code>;</code>). O sistema usará o <strong>email</strong> como chave para 
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Instruções:</strong> O arquivo CSV deve conter as colunas <code>email</code> e <code>matricula</code>,
+                        separadas por ponto e vírgula (<code>;</code>). O sistema usará o <strong>email</strong> como chave para
                         localizar cada usuário e atualizar a matrícula.
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label fw-bold">Arquivo CSV *</label>
-                        <input type="file" class="form-control" 
-                               x-ref="fileInput" 
-                               accept=".csv" 
+                        <input type="file" class="form-control"
+                               x-ref="fileInput"
+                               accept=".csv"
                                @change="onFileChange()">
                         <small class="text-muted" x-show="arquivoSelecionado">
-                            <i class="bi bi-check-circle text-success me-1"></i>
+                            <i class="fas fa-check-circle text-success me-1"></i>
                             <span x-text="arquivoSelecionado"></span>
                         </small>
                     </div>
@@ -279,8 +288,8 @@ maria.souza@ctcinfra.com.br;10089</code></pre>
                     <div x-show="resultadoLote !== null" class="mt-3">
                         <div class="card">
                             <div class="card-body p-3">
-                                <h6 class="mb-3"><i class="bi bi-clipboard-check me-2"></i>Resultado do Processamento</h6>
-                                
+                                <h6 class="mb-3"><i class="fas fa-clipboard-check me-2"></i>Resultado do Processamento</h6>
+
                                 <div class="row g-2 text-center mb-3">
                                     <div class="col-4">
                                         <div class="border rounded p-2 bg-success-subtle">
@@ -333,10 +342,10 @@ maria.souza@ctcinfra.com.br;10089</code></pre>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" @click="fecharModalLote()">Fechar</button>
-                    <button type="button" class="btn btn-success" @click="processarLoteMatriculas()" 
+                    <button type="button" class="btn btn-success" @click="processarLoteMatriculas()"
                             :disabled="processandoLote || !arquivoSelecionado">
                         <span x-show="processandoLote" class="spinner-border spinner-border-sm me-2"></span>
-                        <i class="bi bi-upload me-1" x-show="!processandoLote"></i>
+                        <i class="fas fa-upload me-1" x-show="!processandoLote"></i>
                         <span x-text="processandoLote ? 'Processando...' : 'Processar Arquivo'"></span>
                     </button>
                 </div>
@@ -348,7 +357,6 @@ maria.souza@ctcinfra.com.br;10089</code></pre>
 <script>
 function gerenciarUsuarios() {
     return {
-        // Dados
         usuarios: [],
         usuariosFiltrados: [],
         cargos: [],
@@ -356,12 +364,10 @@ function gerenciarUsuarios() {
         locais: [],
         perfis: [],
 
-        // Filtros
         filtroBusca: '',
         filtroStatus: '',
         filtroSetor: '',
 
-        // Modal principal
         editandoId: null,
         salvando: false,
         modalInstance: null,
@@ -379,14 +385,10 @@ function gerenciarUsuarios() {
             senha: ''
         },
 
-        // Estado do modal de lote
         modalLoteInstance: null,
         processandoLote: false,
         arquivoSelecionado: '',
         resultadoLote: null,
-
-        // ✅ Observers para detectar quando as opções são renderizadas
-        observers: [],
 
         async init() {
             await Promise.all([
@@ -397,18 +399,6 @@ function gerenciarUsuarios() {
                 this.carregarPerfis()
             ]);
             this.usuariosFiltrados = this.usuarios;
-        },
-
-        getString(val) {
-            if (val === null || val === undefined) return '';
-            if (typeof val === 'string') return val;
-            if (typeof val === 'object') {
-                if ('value' in val) return String(val.value);
-                if ('id' in val) return String(val.id);
-                if (Array.isArray(val) && val.length === 1) return this.getString(val[0]);
-                if (Array.isArray(val) && val.length === 0) return '';
-            }
-            return String(val);
         },
 
         async carregarUsuarios() {
@@ -474,8 +464,6 @@ function gerenciarUsuarios() {
         },
 
         editarUsuario(usuario) {
-            console.log('✏️ Editando usuário:', usuario);
-            
             this.editandoId = usuario.id;
             this.erros = {};
             this.form = {
@@ -489,10 +477,6 @@ function gerenciarUsuarios() {
                 status: usuario.status || 'Ativo',
                 senha: ''
             };
-            
-            console.log('📝 Form preenchido:', this.form);
-            
-            // ✅ Abre o modal
             this.showModal();
         },
 
@@ -500,47 +484,6 @@ function gerenciarUsuarios() {
             const modalEl = this.$refs.modalUsuario;
             this.modalInstance = new bootstrap.Modal(modalEl);
             this.modalInstance.show();
-
-            // ✅ Aguarda o modal abrir completamente
-            modalEl.addEventListener('shown.bs.modal', () => {
-                console.log('✅ Modal aberto, aplicando valores aos selects...');
-                
-                // ✅ Aplica os valores aos selects via JS vanilla
-                this.aplicarValoresAosSelects();
-            }, { once: true });
-        },
-
-        // ✅ MÉTODO CRÍTICO: Aplica valores aos selects via JavaScript vanilla
-        aplicarValoresAosSelects() {
-            const selects = [
-                { id: 'select-cargo', value: this.form.cargo_id },
-                { id: 'select-setor', value: this.form.setor_id },
-                { id: 'select-local', value: this.form.local_padrao_id },
-                { id: 'select-perfil', value: this.form.perfil_id }
-            ];
-
-            selects.forEach(({ id, value }) => {
-                const select = document.getElementById(id);
-                if (!select) {
-                    console.warn(`⚠️ Select ${id} não encontrado`);
-                    return;
-                }
-
-                console.log(`🔧 Aplicando valor ${value} ao select ${id}`);
-                console.log(`   Opções disponíveis:`, Array.from(select.options).map(o => ({ value: o.value, text: o.text })));
-
-                // ✅ Define o valor diretamente no select
-                if (value && value !== '') {
-                    // Aguarda o próximo tick para garantir que as opções foram renderizadas
-                    setTimeout(() => {
-                        select.value = value;
-                        console.log(`   ✅ Valor aplicado: ${select.value}`);
-                        
-                        // Dispara evento change para notificar o Alpine.js
-                        select.dispatchEvent(new Event('change', { bubbles: true }));
-                    }, 50);
-                }
-            });
         },
 
         fecharModal() {
@@ -587,14 +530,14 @@ function gerenciarUsuarios() {
 
             try {
                 const payload = {
-                    nome_completo: this.getString(this.form.nome_completo).trim(),
-                    email: this.getString(this.form.email).trim().toLowerCase(),
-                    matricula: this.getString(this.form.matricula) || null,
-                    cargo_id: this.getString(this.form.cargo_id) || null,
-                    setor_id: this.getString(this.form.setor_id) || null,
-                    local_padrao_id: this.getString(this.form.local_padrao_id) || null,
-                    perfil_id: this.getString(this.form.perfil_id),
-                    status: this.getString(this.form.status)
+                    nome_completo: this.form.nome_completo.trim(),
+                    email: this.form.email.trim().toLowerCase(),
+                    matricula: this.form.matricula || null,
+                    cargo_id: this.form.cargo_id || null,
+                    setor_id: this.form.setor_id || null,
+                    local_padrao_id: this.form.local_padrao_id || null,
+                    perfil_id: this.form.perfil_id,
+                    status: this.form.status
                 };
 
                 if (!this.editandoId) {
@@ -602,8 +545,6 @@ function gerenciarUsuarios() {
                 } else if (this.form.senha) {
                     payload.senha = this.form.senha;
                 }
-
-                console.log('📦 Payload:', payload);
 
                 const url = this.editandoId ? `/api/usuarios/${this.editandoId}` : '/api/usuarios';
                 const method = this.editandoId ? 'PUT' : 'POST';

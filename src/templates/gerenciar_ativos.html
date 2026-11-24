@@ -28,7 +28,7 @@
         <div class="card-body">
             <div class="row g-3">
                 <div class="col-md-3">
-                    <input type="text" class="form-control" placeholder="Buscar por código ou descrição..."
+                    <input type="text" class="form-control" placeholder="Buscar por código, patrimônio ou descrição..."
                            x-model="filtroBusca" @input="filtrarAtivos()">
                 </div>
                 <div class="col-md-2">
@@ -128,14 +128,13 @@
                                 <td x-text="ativo.proprietario_nome || '-'"></td>
                                 <td x-text="ativo.usuario_nome || '-'"></td>
                                 <td x-text="ativo.local_nome || '-'"></td>
-                                <!-- ✅ COLUNA DE AÇÕES PADRONIZADA -->
                                 <td class="col-actions">
                                     <div class="action-buttons">
                                         <button class="btn btn-outline-primary btn-action" @click="editarAtivo(ativo)" title="Editar">
-                                            <i class="bi bi-pencil"></i>
+                                            <i class="fas fa-edit"></i>
                                         </button>
                                         <button class="btn btn-outline-danger btn-action" @click="confirmarExclusao(ativo)" title="Excluir">
-                                            <i class="bi bi-trash"></i>
+                                            <i class="fas fa-trash-alt"></i>
                                         </button>
                                     </div>
                                 </td>
@@ -145,7 +144,6 @@
                 </table>
             </div>
         </div>
-        <!-- Contador de registros -->
         <div class="card-footer bg-light text-muted small d-flex justify-content-between align-items-center">
             <span>
                 Exibindo <strong x-text="ativosFiltrados.length"></strong> de <strong x-text="ativos.length"></strong> ativos
@@ -169,7 +167,6 @@
                 </div>
                 <div class="modal-body">
                     <form @submit.prevent="salvarAtivo" novalidate>
-                        <!-- Identificação -->
                         <h6 class="text-muted mb-3 border-bottom pb-2">Identificação Principal</h6>
                         <div class="row g-3 mb-4">
                             <div class="col-md-4">
@@ -187,7 +184,6 @@
                             </div>
                         </div>
 
-                        <!-- Classificação -->
                         <h6 class="text-muted mb-3 border-bottom pb-2">Classificação</h6>
                         <div class="row g-3 mb-4">
                             <div class="col-md-4">
@@ -222,7 +218,6 @@
                             </div>
                         </div>
 
-                        <!-- Detalhes -->
                         <h6 class="text-muted mb-3 border-bottom pb-2">Detalhes e Localização</h6>
                         <div class="row g-3 mb-4">
                             <div class="col-md-12">
@@ -264,7 +259,6 @@
                             </div>
                         </div>
 
-                        <!-- Atributos -->
                         <h6 class="text-muted mb-3 border-bottom pb-2">Atributos Específicos (Opcional)</h6>
                         <div class="row g-3 mb-4">
                             <div class="col-md-3">
@@ -401,11 +395,14 @@ function gerenciarAtivos() {
             } catch (error) { console.error('Erro locais:', error); }
         },
 
+        // ✅ BUSCA ATUALIZADA: agora inclui o campo patrimônio
         filtrarAtivos() {
             this.ativosFiltrados = this.ativos.filter(a => {
+                const busca = this.filtroBusca.toLowerCase();
                 const matchBusca = !this.filtroBusca ||
-                    a.codigo_ativo.toLowerCase().includes(this.filtroBusca.toLowerCase()) ||
-                    (a.descricao && a.descricao.toLowerCase().includes(this.filtroBusca.toLowerCase()));
+                    a.codigo_ativo.toLowerCase().includes(busca) ||
+                    (a.patrimonio && a.patrimonio.toLowerCase().includes(busca)) ||
+                    (a.descricao && a.descricao.toLowerCase().includes(busca));
                 const matchTipo = !this.filtroTipo || a.tipo_ativo === this.filtroTipo;
                 const matchStatus = !this.filtroStatus || a.status === this.filtroStatus;
                 const matchProprietario = !this.filtroProprietario || a.proprietario_nome === this.filtroProprietario;

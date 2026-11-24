@@ -408,6 +408,54 @@
     .main-sidebar::-webkit-scrollbar-track { background: #2c3136; }
     .main-sidebar::-webkit-scrollbar-thumb { background: #4b545c; border-radius: 3px; }
     .main-sidebar::-webkit-scrollbar-thumb:hover { background: #5a6268; }
+
+    /* ===== TABELA COM COLUNA DE AÇÕES FIXA (STICKY) ===== */
+.table-responsive {
+  position: relative;
+  max-height: none;
+}
+
+/* Header da tabela fixo no topo ao rolar verticalmente */
+.table thead {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: #f8f9fa;
+}
+
+.table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: #f8f9fa;
+  border-top: none;
+  border-bottom: 2px solid #dee2e6;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+/* Coluna de ações fixa à direita */
+.table .col-actions {
+  position: sticky;
+  right: 0;
+  z-index: 5;
+  background: inherit;
+  box-shadow: -2px 0 4px rgba(0, 0, 0, 0.08);
+}
+
+/* Garante que o fundo da coluna sticky combine com a linha */
+.table tbody tr:hover .col-actions {
+  background: #f8f9fa;
+}
+
+.table tbody tr .col-actions {
+  background: #ffffff;
+}
+
+/* Ajuste no header da coluna de ações */
+.table thead th.col-actions {
+  background: #f8f9fa;
+  z-index: 11;
+}
   </style>
   
   {% block extra_css %}{% endblock %}
