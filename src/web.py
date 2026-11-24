@@ -259,11 +259,7 @@ def home():
 @login_required_wrapper
 def dashboard():
     """Dashboard principal com visão geral dos ativos"""
-    # Verifica se há dados para mostrar dashboard dinâmico
-    if verificar_dados_ativos():
-        return render_template('dashboard_dinamico.html')
-    else:
-        return render_template('dashboard.html')
+    return render_template('dashboard.html')
 
 @web_bp.route('/ativos')
 @login_required_wrapper
