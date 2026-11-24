@@ -9,21 +9,44 @@ from flask import Blueprint, jsonify, request, Response, send_file
 
 from models import (
     get_db_connection,
+    
     # Ativos
     buscar_ativos, criar_ativo, atualizar_ativo, excluir_ativo,
     obter_atributos_ativo, atualizar_atributos_ativo,
     contar_ativos, contar_ativos_por_status,
+    
+    # ✅ NOVO: Funções de agregação para o Dashboard
+    contar_ativos_por_tipo,
+    contar_ativos_por_categoria,
+    contar_ativos_por_proprietario,
+    contar_ativos_por_local,
+    buscar_ativos_recentes,
+    buscar_ativos_com_defeito,
+    buscar_ativos_sem_usuario,
+    
+    # ✅ NOVO: Funções auxiliares para KPIs
+    contar_usuarios_ativos,
+    contar_usuarios_inativos,
+    contar_empresas,
+    contar_locais_ativos,
+    contar_setores_ativos,
+    
     # Empresas
     buscar_empresas, obter_empresa, criar_empresa, atualizar_empresa, excluir_empresa,
+    
     # Setores
     buscar_setores, obter_setor, criar_setor, atualizar_setor, excluir_setor,
+    
     # Locais
     buscar_locais, obter_local, criar_local, atualizar_local, excluir_local,
+    
     # Usuários
     buscar_usuarios, obter_usuario, criar_usuario, atualizar_usuario, excluir_usuario,
+    
     # Contratos e Solicitações
     buscar_contratos_locacao, vincular_ativo_contrato, desvincular_ativo_contrato, obter_contratos_do_ativo,
     criar_solicitacao, buscar_solicitacoes,
+    
     # Autenticação
     verificar_credenciais
 )

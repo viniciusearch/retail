@@ -49,9 +49,7 @@
       --transition-speed: 0.3s;
     }
     
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
     
     body {
       font-family: 'Source Sans Pro', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -63,59 +61,10 @@
       overflow-x: hidden;
     }
     
-    /* ===== WRAPPER PRINCIPAL ===== */
     .wrapper {
       display: flex;
       flex-direction: column;
       min-height: 100vh;
-    }
-    
-    /* ===== NAVBAR SUPERIOR INTEGRADA ===== */
-    .main-header {
-      background: var(--navbar-bg);
-      border-bottom: 1px solid var(--border-color);
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-      position: sticky;
-      top: 0;
-      z-index: 1030;
-      height: 56px;
-      display: flex;
-      align-items: center;
-      padding: 0 1rem;
-      margin-left: var(--sidebar-width);
-      transition: margin-left var(--transition-speed) ease;
-    }
-    
-    .main-header .nav-link {
-      color: var(--text-muted);
-      padding: 0.5rem 1rem;
-      border-radius: 0.25rem;
-      transition: all 0.2s ease;
-    }
-    
-    .main-header .nav-link:hover {
-      background: var(--content-bg);
-      color: var(--text-primary);
-    }
-    
-    .main-header .dropdown-menu {
-      border: 1px solid var(--border-color);
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-      border-radius: 0.375rem;
-    }
-    
-    .main-header .dropdown-item {
-      padding: 0.5rem 1rem;
-      font-size: 0.9rem;
-    }
-    
-    .main-header .dropdown-item:hover {
-      background: var(--content-bg);
-    }
-    
-    .main-header .dropdown-item.text-danger:hover {
-      background: #fee;
-      color: #dc3545 !important;
     }
     
     /* ===== SIDEBAR ===== */
@@ -135,9 +84,8 @@
       flex-direction: column;
     }
     
-    .main-sidebar.collapsed {
-      width: var(--sidebar-collapsed-width);
-    }
+    .main-sidebar.collapsed { width: var(--sidebar-collapsed-width); }
+    .main-sidebar.dropdown-open { overflow: visible; }
     
     .brand-link {
       display: flex;
@@ -151,6 +99,7 @@
       transition: all 0.2s ease;
       white-space: nowrap;
       overflow: hidden;
+      flex-shrink: 0;
     }
     
     .brand-link:hover {
@@ -166,32 +115,30 @@
       flex-shrink: 0;
     }
     
-    .brand-link .brand-text {
-      transition: opacity var(--transition-speed) ease;
-    }
+    .brand-link .brand-text { transition: opacity var(--transition-speed) ease; }
+    .main-sidebar.collapsed .brand-text { opacity: 0; width: 0; }
     
-    .main-sidebar.collapsed .brand-text {
-      opacity: 0;
-      width: 0;
-    }
-    
-    /* User Panel na Sidebar */
+    /* User Panel */
     .user-panel {
       display: flex;
       align-items: center;
-      padding: 1rem;
+      padding: 0.85rem 1rem;
       border-bottom: 1px solid #4b545c;
       transition: all var(--transition-speed) ease;
-    }
-    
-    .main-sidebar.collapsed .user-panel {
-      padding: 0.5rem;
-      justify-content: center;
-    }
-    
-    .user-panel .image {
+      position: relative;
       flex-shrink: 0;
     }
+    
+    .user-panel .toggle-link {
+      display: flex;
+      align-items: center;
+      width: 100%;
+      text-decoration: none;
+      color: inherit;
+    }
+    
+    .main-sidebar.collapsed .user-panel { padding: 0.5rem; justify-content: center; }
+    .user-panel .image { flex-shrink: 0; }
     
     .user-panel .avatar {
       width: 35px;
@@ -210,15 +157,16 @@
       margin-left: 0.75rem;
       overflow: hidden;
       transition: opacity var(--transition-speed) ease;
+      flex: 1;
+      min-width: 0;
     }
     
-    .main-sidebar.collapsed .user-panel .info {
-      opacity: 0;
-      width: 0;
-      margin-left: 0;
+    .main-sidebar.collapsed .user-panel .info,
+    .main-sidebar.collapsed .user-panel .caret {
+      opacity: 0; width: 0; margin-left: 0; overflow: hidden;
     }
     
-    .user-panel .info a {
+    .user-panel .info .name {
       color: #fff;
       text-decoration: none;
       font-weight: 600;
@@ -227,25 +175,36 @@
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      line-height: 1.2;
     }
     
     .user-panel .info .role {
       font-size: 0.75rem;
       color: rgba(255, 255, 255, 0.5);
       margin-top: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     
-    /* Menu da Sidebar */
-    .sidebar-menu {
-      list-style: none;
-      padding: 0.5rem 0;
-      margin: 0;
-      flex: 1;
+    .user-panel .caret {
+      color: rgba(255, 255, 255, 0.5);
+      font-size: 0.7rem;
+      margin-left: 0.5rem;
+      flex-shrink: 0;
+      transition: opacity var(--transition-speed) ease;
     }
     
-    .sidebar-menu .nav-item {
-      margin: 0;
+    .user-panel .dropdown-menu {
+      min-width: 220px;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      border-radius: 0.375rem;
     }
+    
+    /* Menu */
+    .sidebar-menu { list-style: none; padding: 0.5rem 0; margin: 0; flex: 1; }
+    .sidebar-menu .nav-item { margin: 0; }
     
     .sidebar-menu .nav-link {
       display: flex;
@@ -286,25 +245,15 @@
       transition: opacity var(--transition-speed) ease;
     }
     
-    .main-sidebar.collapsed .sidebar-menu .nav-link p {
-      opacity: 0;
-      width: 0;
-    }
+    .main-sidebar.collapsed .sidebar-menu .nav-link p { opacity: 0; width: 0; }
+    .main-sidebar.collapsed .sidebar-menu .nav-link { padding: 0.75rem; justify-content: center; }
+    .main-sidebar.collapsed .sidebar-menu .nav-link i { margin-right: 0; }
     
-    .main-sidebar.collapsed .sidebar-menu .nav-link {
-      padding: 0.75rem;
-      justify-content: center;
-    }
-    
-    .main-sidebar.collapsed .sidebar-menu .nav-link i {
-      margin-right: 0;
-    }
-    
-    /* Botão de Toggle */
+    /* Toggle Button */
     .sidebar-toggle {
-      position: absolute;
-      right: -12px;
-      top: 20px;
+      position: fixed;
+      top: 10px;
+      left: calc(var(--sidebar-width) - 12px);
       width: 24px;
       height: 24px;
       background: var(--primary);
@@ -316,70 +265,39 @@
       cursor: pointer;
       color: white;
       font-size: 0.7rem;
-      transition: all 0.2s ease;
-      z-index: 10;
+      transition: left var(--transition-speed) ease, background 0.2s ease, transform 0.2s ease;
+      z-index: 1050;
     }
     
-    .sidebar-toggle:hover {
-      background: #0056b3;
-      transform: scale(1.1);
-    }
+    .sidebar-toggle:hover { background: #0056b3; transform: scale(1.1); }
+    body.sidebar-collapsed .sidebar-toggle { left: calc(var(--sidebar-collapsed-width) - 12px); }
+    body.sidebar-collapsed .sidebar-toggle i { transform: rotate(180deg); }
     
-    .main-sidebar.collapsed .sidebar-toggle i {
-      transform: rotate(180deg);
-    }
-    
-    /* ===== CONTENT WRAPPER ===== */
+    /* Content Wrapper */
     .content-wrapper {
       margin-left: var(--sidebar-width);
       flex: 1;
       display: flex;
       flex-direction: column;
-      min-height: calc(100vh - 56px);
+      min-height: 100vh;
       transition: margin-left var(--transition-speed) ease;
     }
     
-    .content-wrapper.expanded {
-      margin-left: var(--sidebar-collapsed-width);
-    }
+    .content-wrapper.expanded { margin-left: var(--sidebar-collapsed-width); }
     
-    /* Content Header com Breadcrumb */
     .content-header {
       padding: 1rem 1.5rem;
       background: var(--content-bg);
       border-bottom: 1px solid var(--border-color);
     }
     
-    .content-header h1 {
-      font-size: 1.5rem;
-      font-weight: 600;
-      margin: 0;
-      color: var(--text-primary);
-    }
+    .content-header h1 { font-size: 1.5rem; font-weight: 600; margin: 0; color: var(--text-primary); }
+    .content-header .breadcrumb { background: transparent; padding: 0; margin: 0; font-size: 0.875rem; }
+    .content-header .breadcrumb-item a { color: var(--primary); text-decoration: none; }
+    .content-header .breadcrumb-item.active { color: var(--text-muted); }
     
-    .content-header .breadcrumb {
-      background: transparent;
-      padding: 0;
-      margin: 0;
-      font-size: 0.875rem;
-    }
+    .main-content { padding: 1.5rem; flex: 1; }
     
-    .content-header .breadcrumb-item a {
-      color: var(--primary);
-      text-decoration: none;
-    }
-    
-    .content-header .breadcrumb-item.active {
-      color: var(--text-muted);
-    }
-    
-    /* Main Content */
-    .main-content {
-      padding: 1.5rem;
-      flex: 1;
-    }
-    
-    /* Cards estilo AdminLTE */
     .card {
       border: 0;
       border-radius: 0.25rem;
@@ -388,18 +306,9 @@
       background: var(--card-bg);
     }
     
-    .card-header {
-      background: #fff;
-      border-bottom: 1px solid var(--border-color);
-      padding: 0.75rem 1.25rem;
-      font-weight: 600;
-    }
+    .card-header { background: #fff; border-bottom: 1px solid var(--border-color); padding: 0.75rem 1.25rem; font-weight: 600; }
+    .card-body { padding: 1.25rem; }
     
-    .card-body {
-      padding: 1.25rem;
-    }
-    
-    /* Footer estilo AdminLTE */
     .main-footer {
       margin-left: var(--sidebar-width);
       background: #fff;
@@ -410,24 +319,12 @@
       transition: margin-left var(--transition-speed) ease;
     }
     
-    .main-footer.expanded {
-      margin-left: var(--sidebar-collapsed-width);
-    }
+    .main-footer.expanded { margin-left: var(--sidebar-collapsed-width); }
+    .main-footer a { color: var(--primary); text-decoration: none; }
+    .main-footer a:hover { text-decoration: underline; }
     
-    .main-footer a {
-      color: var(--primary);
-      text-decoration: none;
-    }
-    
-    .main-footer a:hover {
-      text-decoration: underline;
-    }
-    
-    /* ===== TOOLTIP PARA SIDEBAR COLAPSADA ===== */
-    .main-sidebar.collapsed .sidebar-menu .nav-link {
-      position: relative;
-    }
-    
+    /* Tooltip sidebar colapsada */
+    .main-sidebar.collapsed .sidebar-menu .nav-link { position: relative; }
     .main-sidebar.collapsed .sidebar-menu .nav-link::after {
       content: attr(data-tooltip);
       position: absolute;
@@ -446,30 +343,17 @@
       margin-left: 0.5rem;
       z-index: 1000;
     }
+    .main-sidebar.collapsed .sidebar-menu .nav-link:hover::after { opacity: 1; }
     
-    .main-sidebar.collapsed .sidebar-menu .nav-link:hover::after {
-      opacity: 1;
-    }
-    
-    /* ===== RESPONSIVO ===== */
     @media (max-width: 768px) {
-      .main-sidebar {
-        transform: translateX(-100%);
-      }
-      .main-sidebar.mobile-show {
-        transform: translateX(0);
-      }
-      .content-wrapper, .main-footer, .main-header {
-        margin-left: 0;
-      }
+      .main-sidebar { transform: translateX(-100%); }
+      .main-sidebar.mobile-show { transform: translateX(0); }
+      .content-wrapper, .main-footer { margin-left: 0; }
+      .sidebar-toggle { display: none; }
     }
     
-    /* ===== ESTILOS DE TABELA (PADRONIZAÇÃO GLOBAL) ===== */
-    .table {
-      margin-bottom: 0;
-      font-size: 0.9rem;
-    }
-    
+    /* Tabelas */
+    .table { margin-bottom: 0; font-size: 0.9rem; }
     .table thead th {
       border-top: none;
       border-bottom: 2px solid #dee2e6;
@@ -481,38 +365,12 @@
       padding: 0.75rem 1rem;
       background: #f8f9fa;
     }
+    .table tbody td { padding: 0.875rem 1rem; vertical-align: middle; border-bottom: 1px solid #e9ecef; }
+    .table tbody tr:hover { background-color: #f8f9fa; transition: background-color 0.15s ease; }
+    .table tbody tr:last-child td { border-bottom: none; }
     
-    .table tbody td {
-      padding: 0.875rem 1rem;
-      vertical-align: middle;
-      border-bottom: 1px solid #e9ecef;
-    }
-    
-    .table tbody tr:hover {
-      background-color: #f8f9fa;
-      transition: background-color 0.15s ease;
-    }
-    
-    .table tbody tr:last-child td {
-      border-bottom: none;
-    }
-    
-    /* Coluna de ações - botões lado a lado */
-    .table .col-actions {
-      text-align: right;
-      vertical-align: middle;
-      white-space: nowrap;
-      width: 1%;
-    }
-    
-    .table .action-buttons {
-      display: flex;
-      flex-direction: row;
-      align-items: center;
-      justify-content: flex-end;
-      gap: 4px;
-    }
-    
+    .table .col-actions { text-align: right; vertical-align: middle; white-space: nowrap; width: 1%; }
+    .table .action-buttons { display: flex; flex-direction: row; align-items: center; justify-content: flex-end; gap: 4px; }
     .table .btn-action {
       display: inline-flex;
       align-items: center;
@@ -525,111 +383,31 @@
       transition: all 0.2s ease;
       vertical-align: middle;
     }
+    .table .btn-action:hover { transform: translateY(-1px); box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); }
+    .table .btn-action i { font-size: 0.875rem; }
     
-    .table .btn-action:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
+    .table .badge { font-size: 0.75rem; padding: 0.35em 0.65em; font-weight: 600; letter-spacing: 0.3px; }
+    .table .text-muted { font-size: 0.8rem; }
+    .table .fw-bold { font-size: 0.95rem; }
     
-    .table .btn-action i {
-      font-size: 0.875rem;
-    }
+    .table .empty-state { padding: 3rem 1rem; text-align: center; color: #6c757d; }
+    .table .empty-state i { font-size: 3rem; margin-bottom: 1rem; opacity: 0.5; }
     
-    /* Badges na tabela */
-    .table .badge {
-      font-size: 0.75rem;
-      padding: 0.35em 0.65em;
-      font-weight: 600;
-      letter-spacing: 0.3px;
-    }
-    
-    /* Texto secundário (patrimônio, série) */
-    .table .text-muted {
-      font-size: 0.8rem;
-    }
-    
-    .table .fw-bold {
-      font-size: 0.95rem;
-    }
-    
-    /* Empty state */
-    .table .empty-state {
-      padding: 3rem 1rem;
-      text-align: center;
-      color: #6c757d;
-    }
-    
-    .table .empty-state i {
-      font-size: 3rem;
-      margin-bottom: 1rem;
-      opacity: 0.5;
-    }
-    
-    /* Responsivo tabela */
     @media (max-width: 768px) {
-      .table {
-        font-size: 0.8rem;
-      }
-      
-      .table thead th,
-      .table tbody td {
-        padding: 0.5rem 0.75rem;
-      }
-      
-      .table .btn-action {
-        width: 28px;
-        height: 28px;
-      }
+      .table { font-size: 0.8rem; }
+      .table thead th, .table tbody td { padding: 0.5rem 0.75rem; }
+      .table .btn-action { width: 28px; height: 28px; }
     }
     
-    /* Utility classes AdminLTE */
-    .text-sm {
-      font-size: 0.875rem !important;
-    }
+    .text-sm { font-size: 0.875rem !important; }
+    .elevation-2 { box-shadow: 0 3px 6px rgba(0, 0, 0, 0.16), 0 3px 6px rgba(0, 0, 0, 0.23); }
     
-    .elevation-2 {
-      box-shadow: 0 3px 6px rgba(0, 0, 0, 0.16), 0 3px 6px rgba(0, 0, 0, 0.23);
-    }
+    .choices__inner { min-height: 38px; padding: 4px 8px; border-radius: 0.375rem; }
     
-    /* Ajustes para Choices.js */
-    .choices__inner {
-      min-height: 38px;
-      padding: 4px 8px;
-      border-radius: 0.375rem;
-    }
-    
-    /* Scrollbar da sidebar */
-    .main-sidebar::-webkit-scrollbar {
-      width: 6px;
-    }
-    
-    .main-sidebar::-webkit-scrollbar-track {
-      background: #2c3136;
-    }
-    
-    .main-sidebar::-webkit-scrollbar-thumb {
-      background: #4b545c;
-      border-radius: 3px;
-    }
-    
-    .main-sidebar::-webkit-scrollbar-thumb:hover {
-      background: #5a6268;
-    }
-    
-    /* Avatar na navbar */
-    .user-avatar-sm {
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      background: var(--primary);
-      color: white;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 600;
-      font-size: 0.9rem;
-      margin-right: 0.5rem;
-    }
+    .main-sidebar::-webkit-scrollbar { width: 6px; }
+    .main-sidebar::-webkit-scrollbar-track { background: #2c3136; }
+    .main-sidebar::-webkit-scrollbar-thumb { background: #4b545c; border-radius: 3px; }
+    .main-sidebar::-webkit-scrollbar-thumb:hover { background: #5a6268; }
   </style>
   
   {% block extra_css %}{% endblock %}
@@ -642,23 +420,45 @@
         <i class="fas fa-laptop-code"></i>
         <span class="brand-text">Gestão de Ativos</span>
       </a>
-      
-      <!-- User Panel -->
-      <div class="user-panel">
-        <div class="image">
-          <div class="avatar">
-            {{ (current_user.nome_completo[0] if current_user else 'U') | upper }}
+
+      <!-- Perfil do usuário (user-panel) -->
+      <div class="user-panel dropdown">
+        <a href="#" class="toggle-link" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+          <div class="image">
+            <div class="avatar">
+              {% if current_user.is_authenticated %}
+                {{ current_user.nome_completo[0] | upper }}
+              {% else %}
+                U
+              {% endif %}
+            </div>
           </div>
-        </div>
-        <div class="info">
-          <a href="#">{{ current_user.nome_completo if current_user else 'Usuário' }}</a>
-          <div class="role">{{ current_user.perfil if current_user else 'Visitante' }}</div>
-        </div>
-      </div>
-      
-      <!-- Botão de Toggle -->
-      <div class="sidebar-toggle" id="sidebarToggle" title="Recolher/Expandir">
-        <i class="fas fa-chevron-left"></i>
+          <div class="info">
+            {% if current_user.is_authenticated %}
+              <span class="name">{{ current_user.nome_completo }}</span>
+              <div class="role">{{ current_user.perfil }}</div>
+            {% else %}
+              <span class="name">Visitante</span>
+              <div class="role">Não logado</div>
+            {% endif %}
+          </div>
+          <i class="fas fa-chevron-down caret"></i>
+        </a>
+        
+        <ul class="dropdown-menu dropdown-menu-start">
+          {% if current_user.is_authenticated %}
+            <li class="px-3 py-2 border-bottom">
+              <div class="text-sm text-muted">Logado como</div>
+              <div class="fw-bold">{{ current_user.nome_completo }}</div>
+              <div class="text-sm text-muted">{{ current_user.perfil }}</div>
+            </li>
+            <li><a href="/perfil" class="dropdown-item"><i class="fas fa-user me-2"></i>Meu Perfil</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><a href="/logout" class="dropdown-item text-danger"><i class="fas fa-sign-out-alt me-2"></i>Sair do Sistema</a></li>
+          {% else %}
+            <li><a href="/login" class="dropdown-item"><i class="fas fa-sign-in-alt me-2"></i>Entrar no Sistema</a></li>
+          {% endif %}
+        </ul>
       </div>
       
       <!-- Menu -->
@@ -733,48 +533,12 @@
         </ul>
       </nav>
     </aside>
-    
-    <!-- ===== NAVBAR SUPERIOR (Perfil à esquerda) ===== -->
-    <nav class="main-header" id="mainHeader">
-      <ul class="navbar-nav flex-row align-items-center mb-0">
-        <!-- Perfil do usuário no canto ESQUERDO -->
-        <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-            <div class="user-avatar-sm">
-              {{ (current_user.nome_completo[0] if current_user else 'U') | upper }}
-            </div>
-            <div class="d-none d-md-inline ms-2">
-              <div class="fw-bold" style="font-size: 0.9rem; line-height: 1.2;">
-                {{ current_user.nome_completo if current_user else 'Usuário' }}
-              </div>
-              <div class="text-muted text-sm" style="font-size: 0.75rem;">
-                {{ current_user.perfil if current_user else 'Visitante' }}
-              </div>
-            </div>
-          </a>
-          <ul class="dropdown-menu dropdown-menu-start">
-            <li class="px-3 py-2 border-bottom">
-              <div class="text-sm text-muted">Logado como</div>
-              <div class="fw-bold">{{ current_user.nome_completo if current_user else 'Usuário' }}</div>
-              <div class="text-sm text-muted">{{ current_user.perfil if current_user else 'Visitante' }}</div>
-            </li>
-            <li><a href="/perfil" class="dropdown-item"><i class="fas fa-user me-2"></i>Meu Perfil</a></li>
-            <li><hr class="dropdown-divider"></li>
-            <li><a href="/logout" class="dropdown-item text-danger"><i class="fas fa-sign-out-alt me-2"></i>Sair do Sistema</a></li>
-          </ul>
-        </li>
-      </ul>
-      
-      <!-- Subtítulo da página no centro/direita -->
-      <ul class="navbar-nav ms-auto align-items-center">
-        <li class="nav-item d-none d-sm-inline-block">
-          <span class="navbar-text text-muted text-sm">
-            {% block page_subtitle %}Sistema de Gestão de Ativos{% endblock %}
-          </span>
-        </li>
-      </ul>
-    </nav>
-    
+
+    <!-- ===== BOTÃO DE TOGGLE ===== -->
+    <div class="sidebar-toggle" id="sidebarToggle" title="Recolher/Expandir">
+      <i class="fas fa-chevron-left"></i>
+    </div>
+
     <!-- ===== CONTENT WRAPPER ===== -->
     <div class="content-wrapper" id="contentWrapper">
       <!-- Content Header -->
@@ -830,28 +594,22 @@
   
   <!-- jQuery -->
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-  
   <!-- Bootstrap JS -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-  
   <!-- DataTables JS -->
   <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
   <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
   <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
   <script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap5.min.js"></script>
-  
   <!-- SweetAlert2 JS -->
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-  
   <!-- Choices.js JS -->
   <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
-  
   <!-- Alpine.js -->
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
   
   <!-- Scripts globais -->
   <script>
-    // ===== SIDEBAR TOGGLE =====
     document.addEventListener('DOMContentLoaded', function() {
       const sidebar = document.getElementById('mainSidebar');
       const contentWrapper = document.getElementById('contentWrapper');
@@ -860,26 +618,36 @@
       
       if (!sidebar || !contentWrapper || !mainFooter || !toggleBtn) return;
       
-      // Verifica se há preferência salva
       const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
       if (isCollapsed) {
         sidebar.classList.add('collapsed');
         contentWrapper.classList.add('expanded');
         mainFooter.classList.add('expanded');
+        document.body.classList.add('sidebar-collapsed');
       }
       
-      // Toggle click
       toggleBtn.addEventListener('click', function() {
-        sidebar.classList.toggle('collapsed');
+        const collapsed = sidebar.classList.toggle('collapsed');
         contentWrapper.classList.toggle('expanded');
         mainFooter.classList.toggle('expanded');
-        
-        const collapsed = sidebar.classList.contains('collapsed');
+        document.body.classList.toggle('sidebar-collapsed', collapsed);
         localStorage.setItem('sidebarCollapsed', collapsed);
       });
+      
+      const userPanel = sidebar.querySelector('.user-panel');
+      if (userPanel) {
+        userPanel.addEventListener('shown.bs.dropdown', function() {
+          sidebar.classList.add('dropdown-open');
+        });
+        userPanel.addEventListener('hidden.bs.dropdown', function() {
+          sidebar.classList.remove('dropdown-open');
+        });
+      }
+      
+      const yearEl = document.getElementById('current-year');
+      if (yearEl) yearEl.textContent = new Date().getFullYear();
     });
     
-    // Toast global
     const Toast = Swal.mixin({
       toast: true,
       position: 'top-end',
@@ -892,7 +660,6 @@
       }
     });
     
-    // Inicialização Choices.js
     window.initChoices = function(element) {
       if (!element || element.choicesInstance) return;
       try {
@@ -919,12 +686,6 @@
         }
       }
     };
-    
-    // Ano atual no footer
-    document.addEventListener('DOMContentLoaded', function() {
-      const yearEl = document.getElementById('current-year');
-      if (yearEl) yearEl.textContent = new Date().getFullYear();
-    });
   </script>
   
   {% block extra_js %}{% endblock %}
