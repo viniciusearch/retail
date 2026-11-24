@@ -70,54 +70,6 @@
       min-height: 100vh;
     }
     
-    /* ===== NAVBAR SUPERIOR INTEGRADA ===== */
-    .main-header {
-      background: var(--navbar-bg);
-      border-bottom: 1px solid var(--border-color);
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-      position: sticky;
-      top: 0;
-      z-index: 1030;
-      height: 56px;
-      display: flex;
-      align-items: center;
-      padding: 0 1rem;
-      margin-left: var(--sidebar-width);
-      transition: margin-left var(--transition-speed) ease;
-    }
-    
-    .main-header .nav-link {
-      color: var(--text-muted);
-      padding: 0.5rem 1rem;
-      border-radius: 0.25rem;
-      transition: all 0.2s ease;
-    }
-    
-    .main-header .nav-link:hover {
-      background: var(--content-bg);
-      color: var(--text-primary);
-    }
-    
-    .main-header .dropdown-menu {
-      border: 1px solid var(--border-color);
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-      border-radius: 0.375rem;
-    }
-    
-    .main-header .dropdown-item {
-      padding: 0.5rem 1rem;
-      font-size: 0.9rem;
-    }
-    
-    .main-header .dropdown-item:hover {
-      background: var(--content-bg);
-    }
-    
-    .main-header .dropdown-item.text-danger:hover {
-      background: #fee;
-      color: #dc3545 !important;
-    }
-    
     /* ===== SIDEBAR ===== */
     .main-sidebar {
       background: var(--sidebar-bg);
@@ -139,6 +91,11 @@
       width: var(--sidebar-collapsed-width);
     }
     
+    /* Permite que o dropdown do usuário vaze sem ser cortado */
+    .main-sidebar.dropdown-open {
+      overflow: visible;
+    }
+    
     .brand-link {
       display: flex;
       align-items: center;
@@ -151,6 +108,7 @@
       transition: all 0.2s ease;
       white-space: nowrap;
       overflow: hidden;
+      flex-shrink: 0;
     }
     
     .brand-link:hover {
@@ -175,13 +133,23 @@
       width: 0;
     }
     
-    /* User Panel na Sidebar */
+    /* ===== USER PANEL (perfil na sidebar) ===== */
     .user-panel {
       display: flex;
       align-items: center;
-      padding: 1rem;
+      padding: 0.85rem 1rem;
       border-bottom: 1px solid #4b545c;
       transition: all var(--transition-speed) ease;
+      position: relative;
+      flex-shrink: 0;
+    }
+    
+    .user-panel .toggle-link {
+      display: flex;
+      align-items: center;
+      width: 100%;
+      text-decoration: none;
+      color: inherit;
     }
     
     .main-sidebar.collapsed .user-panel {
@@ -210,15 +178,19 @@
       margin-left: 0.75rem;
       overflow: hidden;
       transition: opacity var(--transition-speed) ease;
+      flex: 1;
+      min-width: 0;
     }
     
-    .main-sidebar.collapsed .user-panel .info {
+    .main-sidebar.collapsed .user-panel .info,
+    .main-sidebar.collapsed .user-panel .caret {
       opacity: 0;
       width: 0;
       margin-left: 0;
+      overflow: hidden;
     }
     
-    .user-panel .info a {
+    .user-panel .info .name {
       color: #fff;
       text-decoration: none;
       font-weight: 600;
@@ -227,15 +199,49 @@
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      line-height: 1.2;
     }
     
     .user-panel .info .role {
       font-size: 0.75rem;
       color: rgba(255, 255, 255, 0.5);
       margin-top: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     
-    /* Menu da Sidebar */
+    .user-panel .caret {
+      color: rgba(255, 255, 255, 0.5);
+      font-size: 0.7rem;
+      margin-left: 0.5rem;
+      flex-shrink: 0;
+      transition: opacity var(--transition-speed) ease;
+    }
+    
+    /* Dropdown do usuário */
+    .user-panel .dropdown-menu {
+      min-width: 220px;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      border-radius: 0.375rem;
+    }
+    
+    .user-panel .dropdown-item {
+      padding: 0.5rem 1rem;
+      font-size: 0.9rem;
+    }
+    
+    .user-panel .dropdown-item:hover {
+      background: var(--content-bg);
+    }
+    
+    .user-panel .dropdown-item.text-danger:hover {
+      background: #fee;
+      color: #dc3545 !important;
+    }
+    
+    /* ===== MENU DA SIDEBAR ===== */
     .sidebar-menu {
       list-style: none;
       padding: 0.5rem 0;
@@ -300,11 +306,11 @@
       margin-right: 0;
     }
     
-    /* Botão de Toggle */
+    /* ===== BOTÃO DE TOGGLE (fora da sidebar, fixo, por cima de tudo) ===== */
     .sidebar-toggle {
-      position: absolute;
-      right: -12px;
-      top: 20px;
+      position: fixed;
+      top: 10px;
+      left: calc(var(--sidebar-width) - 12px);
       width: 24px;
       height: 24px;
       background: var(--primary);
@@ -316,8 +322,8 @@
       cursor: pointer;
       color: white;
       font-size: 0.7rem;
-      transition: all 0.2s ease;
-      z-index: 10;
+      transition: left var(--transition-speed) ease, background 0.2s ease, transform 0.2s ease;
+      z-index: 1050;
     }
     
     .sidebar-toggle:hover {
@@ -325,7 +331,11 @@
       transform: scale(1.1);
     }
     
-    .main-sidebar.collapsed .sidebar-toggle i {
+    body.sidebar-collapsed .sidebar-toggle {
+      left: calc(var(--sidebar-collapsed-width) - 12px);
+    }
+    
+    body.sidebar-collapsed .sidebar-toggle i {
       transform: rotate(180deg);
     }
     
@@ -335,7 +345,7 @@
       flex: 1;
       display: flex;
       flex-direction: column;
-      min-height: calc(100vh - 56px);
+      min-height: 100vh;
       transition: margin-left var(--transition-speed) ease;
     }
     
@@ -459,8 +469,11 @@
       .main-sidebar.mobile-show {
         transform: translateX(0);
       }
-      .content-wrapper, .main-footer, .main-header {
+      .content-wrapper, .main-footer {
         margin-left: 0;
+      }
+      .sidebar-toggle {
+        display: none;
       }
     }
     
@@ -615,21 +628,6 @@
     .main-sidebar::-webkit-scrollbar-thumb:hover {
       background: #5a6268;
     }
-    
-    /* Avatar na navbar */
-    .user-avatar-sm {
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      background: var(--primary);
-      color: white;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 600;
-      font-size: 0.9rem;
-      margin-right: 0.5rem;
-    }
   </style>
   
   {% block extra_css %}{% endblock %}
@@ -639,26 +637,34 @@
     <!-- ===== SIDEBAR ===== -->
     <aside class="main-sidebar" id="mainSidebar">
       <a href="/dashboard" class="brand-link">
-        <i class="fas fa-laptop-code"></i>
-        <span class="brand-text">Gestão de Ativos</span>
+        <i class="fas fa-signs-post"></i>
+        <span class="brand-text">Retail</span>
       </a>
-      
-      <!-- User Panel -->
-      <div class="user-panel">
-        <div class="image">
-          <div class="avatar">
-            {{ (current_user.nome_completo[0] if current_user else 'U') | upper }}
+
+      <!-- Perfil do usuário (user-panel) -->
+      <div class="user-panel dropdown">
+        <a href="#" class="toggle-link" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+          <div class="image">
+            <div class="avatar">
+              {{ (current_user.nome_completo[0] if current_user else 'U') | upper }}
+            </div>
           </div>
-        </div>
-        <div class="info">
-          <a href="#">{{ current_user.nome_completo if current_user else 'Usuário' }}</a>
-          <div class="role">{{ current_user.perfil if current_user else 'Visitante' }}</div>
-        </div>
-      </div>
-      
-      <!-- Botão de Toggle -->
-      <div class="sidebar-toggle" id="sidebarToggle" title="Recolher/Expandir">
-        <i class="fas fa-chevron-left"></i>
+          <div class="info">
+            <span class="name">{{ current_user.nome_completo if current_user else 'Usuário' }}</span>
+            <div class="role">{{ current_user.perfil if current_user else 'Visitante' }}</div>
+          </div>
+          <i class="fas fa-chevron-down caret"></i>
+        </a>
+        <ul class="dropdown-menu dropdown-menu-start">
+          <li class="px-3 py-2 border-bottom">
+            <div class="text-sm text-muted">Logado como</div>
+            <div class="fw-bold">{{ current_user.nome_completo if current_user else 'Usuário' }}</div>
+            <div class="text-sm text-muted">{{ current_user.perfil if current_user else 'Visitante' }}</div>
+          </li>
+          <li><a href="/perfil" class="dropdown-item"><i class="fas fa-user me-2"></i>Meu Perfil</a></li>
+          <li><hr class="dropdown-divider"></li>
+          <li><a href="/logout" class="dropdown-item text-danger"><i class="fas fa-sign-out-alt me-2"></i>Sair do Sistema</a></li>
+        </ul>
       </div>
       
       <!-- Menu -->
@@ -733,48 +739,12 @@
         </ul>
       </nav>
     </aside>
-    
-    <!-- ===== NAVBAR SUPERIOR (Perfil à esquerda) ===== -->
-    <nav class="main-header" id="mainHeader">
-      <ul class="navbar-nav flex-row align-items-center mb-0">
-        <!-- Perfil do usuário no canto ESQUERDO -->
-        <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-            <div class="user-avatar-sm">
-              {{ (current_user.nome_completo[0] if current_user else 'U') | upper }}
-            </div>
-            <div class="d-none d-md-inline ms-2">
-              <div class="fw-bold" style="font-size: 0.9rem; line-height: 1.2;">
-                {{ current_user.nome_completo if current_user else 'Usuário' }}
-              </div>
-              <div class="text-muted text-sm" style="font-size: 0.75rem;">
-                {{ current_user.perfil if current_user else 'Visitante' }}
-              </div>
-            </div>
-          </a>
-          <ul class="dropdown-menu dropdown-menu-start">
-            <li class="px-3 py-2 border-bottom">
-              <div class="text-sm text-muted">Logado como</div>
-              <div class="fw-bold">{{ current_user.nome_completo if current_user else 'Usuário' }}</div>
-              <div class="text-sm text-muted">{{ current_user.perfil if current_user else 'Visitante' }}</div>
-            </li>
-            <li><a href="/perfil" class="dropdown-item"><i class="fas fa-user me-2"></i>Meu Perfil</a></li>
-            <li><hr class="dropdown-divider"></li>
-            <li><a href="/logout" class="dropdown-item text-danger"><i class="fas fa-sign-out-alt me-2"></i>Sair do Sistema</a></li>
-          </ul>
-        </li>
-      </ul>
-      
-      <!-- Subtítulo da página no centro/direita -->
-      <ul class="navbar-nav ms-auto align-items-center">
-        <li class="nav-item d-none d-sm-inline-block">
-          <span class="navbar-text text-muted text-sm">
-            {% block page_subtitle %}Sistema de Gestão de Ativos{% endblock %}
-          </span>
-        </li>
-      </ul>
-    </nav>
-    
+
+    <!-- ===== BOTÃO DE TOGGLE (fora da sidebar, fixo, por cima de tudo) ===== -->
+    <div class="sidebar-toggle" id="sidebarToggle" title="Recolher/Expandir">
+      <i class="fas fa-chevron-left"></i>
+    </div>
+
     <!-- ===== CONTENT WRAPPER ===== -->
     <div class="content-wrapper" id="contentWrapper">
       <!-- Content Header -->
@@ -851,7 +821,6 @@
   
   <!-- Scripts globais -->
   <script>
-    // ===== SIDEBAR TOGGLE =====
     document.addEventListener('DOMContentLoaded', function() {
       const sidebar = document.getElementById('mainSidebar');
       const contentWrapper = document.getElementById('contentWrapper');
@@ -860,23 +829,38 @@
       
       if (!sidebar || !contentWrapper || !mainFooter || !toggleBtn) return;
       
-      // Verifica se há preferência salva
+      // ===== ESTADO INICIAL (restaura preferência salva) =====
       const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
       if (isCollapsed) {
         sidebar.classList.add('collapsed');
         contentWrapper.classList.add('expanded');
         mainFooter.classList.add('expanded');
+        document.body.classList.add('sidebar-collapsed');
       }
       
-      // Toggle click
+      // ===== TOGGLE DA SIDEBAR =====
       toggleBtn.addEventListener('click', function() {
-        sidebar.classList.toggle('collapsed');
+        const collapsed = sidebar.classList.toggle('collapsed');
         contentWrapper.classList.toggle('expanded');
         mainFooter.classList.toggle('expanded');
-        
-        const collapsed = sidebar.classList.contains('collapsed');
+        document.body.classList.toggle('sidebar-collapsed', collapsed);
         localStorage.setItem('sidebarCollapsed', collapsed);
       });
+      
+      // ===== EVITA CORTE DO DROPDOWN DO USUÁRIO =====
+      const userPanel = sidebar.querySelector('.user-panel');
+      if (userPanel) {
+        userPanel.addEventListener('shown.bs.dropdown', function() {
+          sidebar.classList.add('dropdown-open');
+        });
+        userPanel.addEventListener('hidden.bs.dropdown', function() {
+          sidebar.classList.remove('dropdown-open');
+        });
+      }
+      
+      // Ano atual no footer
+      const yearEl = document.getElementById('current-year');
+      if (yearEl) yearEl.textContent = new Date().getFullYear();
     });
     
     // Toast global
@@ -919,12 +903,6 @@
         }
       }
     };
-    
-    // Ano atual no footer
-    document.addEventListener('DOMContentLoaded', function() {
-      const yearEl = document.getElementById('current-year');
-      if (yearEl) yearEl.textContent = new Date().getFullYear();
-    });
   </script>
   
   {% block extra_js %}{% endblock %}
