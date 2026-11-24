@@ -2,29 +2,33 @@
 
 {% block title %}Gerenciar Ativos{% endblock %}
 
+{% block page_title %}Gerenciar Ativos{% endblock %}
+{% block page_subtitle %}Módulo de Ativos{% endblock %}
+{% block breadcrumb_active %}Ativos{% endblock %}
+
 {% block content %}
-<div class="container-fluid mt-4" x-data="gerenciarAtivos()">
+<div class="container-fluid" x-data="gerenciarAtivos()">
     <!-- Header -->
     <div class="row mb-4 align-items-center">
         <div class="col-md-8">
             <h2 class="mb-0">
-                <i class="bi bi-laptop me-2"></i>Gerenciar Ativos
+                <i class="fas fa-boxes-stacked me-2 text-primary"></i>Gerenciar Ativos
             </h2>
             <p class="text-muted mb-0">Cadastre e gerencie todos os equipamentos do sistema</p>
         </div>
         <div class="col-md-4 text-end">
             <button class="btn btn-primary" @click="abrirModal()">
-                <i class="bi bi-plus-circle me-2"></i>Novo Ativo
+                <i class="fas fa-plus-circle me-2"></i>Novo Ativo
             </button>
         </div>
     </div>
 
     <!-- Filtros Avançados -->
-    <div class="card mb-3 shadow-sm">
+    <div class="card mb-3">
         <div class="card-body">
             <div class="row g-3">
                 <div class="col-md-3">
-                    <input type="text" class="form-control" placeholder="Buscar por código ou descrição..." 
+                    <input type="text" class="form-control" placeholder="Buscar por código ou descrição..."
                            x-model="filtroBusca" @input="filtrarAtivos()">
                 </div>
                 <div class="col-md-2">
@@ -57,23 +61,23 @@
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <button class="btn btn-outline-secondary w-100" @click="limparFiltros()">
-                        <i class="bi bi-x-circle me-2"></i>Limpar
+                    <button class="btn btn-outline-secondary w-100 mb-2" @click="limparFiltros()">
+                        <i class="fas fa-xmark me-2"></i>Limpar
                     </button>
-                      <button class="btn btn-danger w-100" @click="gerarPDF()" :disabled="ativosFiltrados.length === 0">
-        <i class="bi bi-file-pdf me-2"></i>Gerar PDF
-    </button>
+                    <button class="btn btn-danger w-100" @click="gerarPDF()" :disabled="ativosFiltrados.length === 0">
+                        <i class="fas fa-file-pdf me-2"></i>Gerar PDF
+                    </button>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Tabela de Ativos -->
-    <div class="card shadow-sm">
+    <div class="card">
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light">
+                    <thead>
                         <tr>
                             <th class="ps-4">Código</th>
                             <th>Descrição</th>
@@ -89,9 +93,11 @@
                     <tbody>
                         <template x-if="ativosFiltrados.length === 0">
                             <tr>
-                                <td colspan="9" class="text-center py-5 text-muted">
-                                    <i class="bi bi-inbox fs-1 d-block mb-2"></i>
-                                    Nenhum ativo encontrado com os filtros atuais
+                                <td colspan="9">
+                                    <div class="empty-state">
+                                        <i class="fas fa-inbox"></i>
+                                        <p>Nenhum ativo encontrado com os filtros atuais</p>
+                                    </div>
                                 </td>
                             </tr>
                         </template>
@@ -122,13 +128,16 @@
                                 <td x-text="ativo.proprietario_nome || '-'"></td>
                                 <td x-text="ativo.usuario_nome || '-'"></td>
                                 <td x-text="ativo.local_nome || '-'"></td>
-                                <td class="text-end pe-4">
-                                    <button class="btn btn-sm btn-outline-primary me-1" @click="editarAtivo(ativo)" title="Editar">
-                                        <i class="bi bi-pencil"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-outline-danger" @click="confirmarExclusao(ativo)" title="Excluir">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
+                                <!-- ✅ COLUNA DE AÇÕES PADRONIZADA -->
+                                <td class="col-actions">
+                                    <div class="action-buttons">
+                                        <button class="btn btn-outline-primary btn-action" @click="editarAtivo(ativo)" title="Editar">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button class="btn btn-outline-danger btn-action" @click="confirmarExclusao(ativo)" title="Excluir">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         </template>
@@ -136,7 +145,7 @@
                 </table>
             </div>
         </div>
-        <!-- ✅ CONTADOR DE REGISTROS NO RODAPÉ -->
+        <!-- Contador de registros -->
         <div class="card-footer bg-light text-muted small d-flex justify-content-between align-items-center">
             <span>
                 Exibindo <strong x-text="ativosFiltrados.length"></strong> de <strong x-text="ativos.length"></strong> ativos
@@ -153,7 +162,7 @@
             <div class="modal-content">
                 <div class="modal-header bg-primary text-white">
                     <h5 class="modal-title">
-                        <i class="bi bi-laptop me-2"></i>
+                        <i class="fas fa-laptop me-2"></i>
                         <span x-text="editandoId ? 'Editar Ativo' : 'Novo Ativo'"></span>
                     </h5>
                     <button type="button" class="btn-close btn-close-white" @click="fecharModal()"></button>
@@ -309,7 +318,7 @@ function gerenciarAtivos() {
         filtroBusca: '',
         filtroTipo: '',
         filtroStatus: '',
-        filtroProprietario: '', // ✅ Filtro de proprietário
+        filtroProprietario: '',
 
         editandoId: null,
         salvando: false,
@@ -334,11 +343,41 @@ function gerenciarAtivos() {
             this.ativosFiltrados = this.ativos;
         },
 
+        inicializarChoicesNoModal() {
+            const modalEl = this.$refs.modalAtivo;
+            if (!modalEl) return;
+
+            modalEl.querySelectorAll('select.modal-choices').forEach(el => {
+                window.destroyChoices(el);
+            });
+
+            this.$nextTick(() => {
+                setTimeout(() => {
+                    modalEl.querySelectorAll('select.modal-choices').forEach(select => {
+                        window.initChoices(select);
+                        if (select.choicesInstance) {
+                            const fieldName = select.dataset.field;
+                            const fieldValue = this.form[fieldName];
+                            if (fieldValue !== undefined && fieldValue !== '' && fieldValue !== null) {
+                                try {
+                                    select.choicesInstance.setChoiceByValue(String(fieldValue));
+                                } catch (e) {
+                                    console.warn('Falha ao definir valor no Choices:', fieldName, e);
+                                }
+                            }
+                        }
+                    });
+                }, 100);
+            });
+        },
+
         async carregarAtivos() {
             try {
                 const response = await fetch('/api/ativos');
                 this.ativos = await response.json();
-            } catch (error) { console.error('Erro ao carregar ativos:', error); }
+            } catch (error) {
+                console.error('Erro ao carregar ativos:', error);
+            }
         },
 
         async carregarEmpresas() {
@@ -362,19 +401,14 @@ function gerenciarAtivos() {
             } catch (error) { console.error('Erro locais:', error); }
         },
 
-        // ✅ Lógica de filtragem atualizada incluindo o proprietário
         filtrarAtivos() {
             this.ativosFiltrados = this.ativos.filter(a => {
                 const matchBusca = !this.filtroBusca ||
                     a.codigo_ativo.toLowerCase().includes(this.filtroBusca.toLowerCase()) ||
                     (a.descricao && a.descricao.toLowerCase().includes(this.filtroBusca.toLowerCase()));
-                
                 const matchTipo = !this.filtroTipo || a.tipo_ativo === this.filtroTipo;
                 const matchStatus = !this.filtroStatus || a.status === this.filtroStatus;
-                
-                // Compara o nome da empresa (proprietario_nome) com o filtro selecionado
                 const matchProprietario = !this.filtroProprietario || a.proprietario_nome === this.filtroProprietario;
-                
                 return matchBusca && matchTipo && matchStatus && matchProprietario;
             });
         },
@@ -383,29 +417,21 @@ function gerenciarAtivos() {
             this.filtroBusca = '';
             this.filtroTipo = '';
             this.filtroStatus = '';
-            this.filtroProprietario = ''; // ✅ Reseta o filtro de proprietário
+            this.filtroProprietario = '';
             this.filtrarAtivos();
         },
+
         gerarPDF() {
-    // Monta a URL com os filtros atuais
-    const params = new URLSearchParams();
-    
-    if (this.filtroBusca) params.append('codigo_ativo', this.filtroBusca);
-    if (this.filtroTipo) params.append('tipo_ativo', this.filtroTipo);
-    if (this.filtroStatus) params.append('status', this.filtroStatus);
-    if (this.filtroProprietario) params.append('proprietario', this.filtroProprietario);
-    
-    const queryString = params.toString();
-    const url = `/api/ativos/relatorio-pdf${queryString ? '?' + queryString : ''}`;
-    
-    // Abre em nova aba para download
-    window.open(url, '_blank');
-    
-    Toast.fire({ 
-        icon: 'info', 
-        title: `Gerando PDF com ${this.ativosFiltrados.length} ativo(s)...` 
-    });
-},
+            const params = new URLSearchParams();
+            if (this.filtroBusca) params.append('codigo_ativo', this.filtroBusca);
+            if (this.filtroTipo) params.append('tipo_ativo', this.filtroTipo);
+            if (this.filtroStatus) params.append('status', this.filtroStatus);
+            if (this.filtroProprietario) params.append('proprietario', this.filtroProprietario);
+            const queryString = params.toString();
+            const url = `/api/ativos/relatorio-pdf${queryString ? '?' + queryString : ''}`;
+            window.open(url, '_blank');
+            Toast.fire({ icon: 'info', title: `Gerando PDF com ${this.ativosFiltrados.length} ativo(s)...` });
+        },
 
         abrirModal() {
             this.editandoId = null;
@@ -445,23 +471,9 @@ function gerenciarAtivos() {
 
         showModal() {
             const modalEl = this.$refs.modalAtivo;
-            modalEl.querySelectorAll('select.modal-choices').forEach(el => window.destroyChoices(el));
             this.modalInstance = new bootstrap.Modal(modalEl);
             this.modalInstance.show();
-            this.$nextTick(() => {
-                setTimeout(() => {
-                    modalEl.querySelectorAll('select.modal-choices').forEach(el => {
-                        window.initChoices(el);
-                        if (el.choicesInstance) {
-                            const fieldName = el.dataset.field;
-                            const fieldValue = this.form[fieldName];
-                            if (fieldValue !== undefined && fieldValue !== '' && fieldValue !== null) {
-                                try { el.choicesInstance.setChoiceByValue(String(fieldValue)); } catch (e) {}
-                            }
-                        }
-                    });
-                }, 100);
-            });
+            this.inicializarChoicesNoModal();
         },
 
         fecharModal() {
